@@ -1,9 +1,10 @@
 import React from 'react';
+import MainView from '../MainView';
 
 
 export default class HomeView extends React.Component {
 
   render() {
-    return (<div>Hello...</div>);
+    return (<MainView>Hello...</MainView>);
   }
 }
