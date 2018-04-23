@@ -1,8 +1,7 @@
 import json
 from django.contrib.auth import authenticate
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
-from . models import Pool
-
+from .models import Pool
 
 def login(request):
     """
@@ -32,10 +31,9 @@ def reservation(request):
 def pools_list(request):
     if request.method == 'GET':
         pools = list(Pool.objects.values())
-        type(pools[0])
         for p in pools:
             del p['id']
-        json_pools = json.dumps(pools)
+        json_pools = json.dumps({"pools": pools})
         return HttpResponse(json_pools, content_type="application/json")
     elif request.method == 'POST':
         pools = request.body.decode()
@@ -48,6 +46,7 @@ def pools_list(request):
                 to_add.append(p)
         except Exception:
             return HttpResponseBadRequest("Incorrect pools description")
+        Pool.objects.all().delete()
         for p in to_add:
             p.save()
         return HttpResponse("Pools added to database")
