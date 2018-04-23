@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from . .models import Pool
+from .models import Pool
 
 # Register your models here.
 
