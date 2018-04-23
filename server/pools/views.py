@@ -1,10 +1,7 @@
 import json
-
 from django.contrib.auth import authenticate
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
-
-
-# Create your views here.
+from . models import Pool
 
 
 def login(request):
@@ -30,3 +27,27 @@ def login(request):
 
 def reservation(request):
     pass
+
+
+def pools_list(request):
+    if request.method == 'GET':
+        pools = list(Pool.objects.values())
+        type(pools[0])
+        for p in pools:
+            del p['id']
+        json_pools = json.dumps(pools)
+        return HttpResponse(json_pools, content_type="application/json")
+    elif request.method == 'POST':
+        pools = request.body.decode()
+        pools_json = json.loads(pools)['pools']
+        to_add = []
+        try:
+            for pool in pools_json:
+                p = Pool(pool_id=pool['pool_id'], displayName=pool['displayName'], maximumCount=int(pool['maximumCount']),
+                         enabled=bool(pool['enabled']), description=pool['description'])
+                to_add.append(p)
+        except Exception:
+            return HttpResponseBadRequest("Incorrect pools description")
+        for p in to_add:
+            p.save()
+        return HttpResponse("Pools added to database")

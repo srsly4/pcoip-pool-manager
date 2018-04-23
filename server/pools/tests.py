@@ -4,12 +4,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase, Client
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
-
-from . .models import Pool, Reservation
-
-
-# Create your tests here.
-from . .views import login
+from server.pools.models import Pool, Reservation
+from server.pools.views import login
 
 
 class ModelTest(TestCase):
@@ -29,7 +25,7 @@ class ModelTest(TestCase):
         self.assertFalse(self.pool.can_place_reservation(7, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
 
 
-class ApiTest(TestCase):
+class LoginTest(TestCase):
     def setUp(self):
         self.user = User.objects.create(username="test", password="testpassword", is_active=True)
         self.user.set_password("testpassword")
@@ -46,3 +42,19 @@ class ApiTest(TestCase):
         self.assertEqual(login(correct_request).status_code, status.HTTP_200_OK)
         self.assertEqual(login(incorrect_request).status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(login(no_such_user_request).status_code, status.HTTP_404_NOT_FOUND)
+
+
+class PoolsTest(TestCase):
+    def setUp(self):
+        Pool.objects.create(pool_id='id1', displayName='name1', maximumCount=10,
+                         enabled=True, description='desc1')
+        Pool.objects.create(pool_id='id2', displayName='name2', maximumCount=20,
+                            enabled=False, description='desc2')
+
+    def test_get(self):
+        data = Pool.objects.all()
+        self.assertEquals(len(data), 2)
+        self.assertTrue(Pool.objects.all().contains(Pool(pool_id='id1', displayName='name1', maximumCount=10,
+                            enabled=False, description='desc1')))
+        self.assertTrue(Pool.objects.all().contains(Pool(pool_id='id2', displayName='name2', maximumCount=20,
+                                                         enabled=False, description='desc2')))
