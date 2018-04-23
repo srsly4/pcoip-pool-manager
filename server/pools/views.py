@@ -22,9 +22,7 @@ def login(request):
         except (TypeError, AssertionError, KeyError):
             return HttpResponseBadRequest("Incorrect request body")
         user = authenticate(username=username, password=password)
-        print(user)
         if user is not None:
-            # django.contrib.auth.login(request, user)
             return HttpResponse(status=200)
         else:
             return HttpResponseNotFound("Login failed")
