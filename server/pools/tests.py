@@ -5,19 +5,21 @@ from django.test import TestCase, Client
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 from server.pools.models import Pool, Reservation
-from server.pools.views import login
+from .views import login
+
+# Create your tests here.
 
 
 class ModelTest(TestCase):
     def setUp(self):
         self.pool = Pool.objects.create(pool_id="1", displayName="1", maximumCount=10)
         self.user = User.objects.create(username="test", password="test")
-        Reservation.objects.create(pool_id=self.pool.id, user_id=self.user.id, count=5,
+        Reservation.objects.create(pool_id=self.pool.id, user_id=self.user.id, slot_count=5,
                                    start_datetime=datetime(2018, 4, 1, 11, 15),
                                    end_datetime=datetime(2018, 4, 1, 12, 45))
 
     def test_already_reserved_slots(self):
-        self.assertEqual(self.pool.already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 12, 30)),
+        self.assertEqual(self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 12, 30)),
                          5)
 
     def test_can_place_reservation(self):
@@ -44,17 +46,3 @@ class LoginTest(TestCase):
         self.assertEqual(login(no_such_user_request).status_code, status.HTTP_404_NOT_FOUND)
 
 
-class PoolsTest(TestCase):
-    def setUp(self):
-        Pool.objects.create(pool_id='id1', displayName='name1', maximumCount=10,
-                         enabled=True, description='desc1')
-        Pool.objects.create(pool_id='id2', displayName='name2', maximumCount=20,
-                            enabled=False, description='desc2')
-
-    def test_get(self):
-        data = Pool.objects.all()
-        self.assertEquals(len(data), 2)
-        self.assertTrue(Pool.objects.all().contains(Pool(pool_id='id1', displayName='name1', maximumCount=10,
-                            enabled=False, description='desc1')))
-        self.assertTrue(Pool.objects.all().contains(Pool(pool_id='id2', displayName='name2', maximumCount=20,
-                                                         enabled=False, description='desc2')))
