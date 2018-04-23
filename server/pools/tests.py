@@ -12,14 +12,6 @@ from . .models import Pool, Reservation
 from . .views import login
 
 
-class SampleTest(TestCase):
-    def setUp(self):
-        pass
-
-    def test_sample(self):
-        self.assertEqual(2, 1 + 1)
-
-
 class ModelTest(TestCase):
     def setUp(self):
         self.pool = Pool.objects.create(pool_id="1", displayName="1", maximumCount=10)
