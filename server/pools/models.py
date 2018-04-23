@@ -17,14 +17,14 @@ class Pool(models.Model):
     enabled = models.BooleanField(default=True)
     description = models.TextField(default="")
 
-    def already_reserved_slots(self, start, end):
+    def calculate_already_reserved_slots(self, start, end):
         """
         Counts number of slots already taken
         :param start: Datetime of beginning of reservation
         :param end: Datetime of finish of reservation
         :return: Number of slots already reserved
         """
-        return sum([order.count for order in Reservation.objects.filter(pool_id=self.id)
+        return sum([reservation.count for reservation in Reservation.objects.filter(pool_id=self.id)
                     .filter(end_datetime__gt=start, start_datetime__lt=end)])
 
     def can_place_reservation(self, number_of_slots, start, end):
@@ -35,7 +35,7 @@ class Pool(models.Model):
         :param number_of_slots: Number of slots user would like to reserve
         :return: True if the reservation is possible to place, else False
         """
-        return self.maximumCount - self.already_reserved_slots(start, end) >= number_of_slots
+        return self.maximumCount - self.calculate_already_reserved_slots(start, end) >= number_of_slots
 
 
 class Reservation(models.Model):
@@ -44,6 +44,6 @@ class Reservation(models.Model):
     """
     pool = models.ForeignKey(Pool, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    count = models.PositiveSmallIntegerField(default=0)
+    slot_count = models.PositiveSmallIntegerField(default=0)
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
