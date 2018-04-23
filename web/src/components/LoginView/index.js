@@ -3,8 +3,10 @@ import {connect} from 'react-redux';
 import {Button} from 'react-foundation';
 import fetch from 'isomorphic-fetch';
 
-import actions from '../../actions'
-import './style.css'
+import actions from '../../actions';
+import './style.css';
+
+import logo from './logo.jpg';
 
 class LoginView extends React.Component {
 
@@ -53,6 +55,8 @@ class LoginView extends React.Component {
     return (
       <div className="login-view-container">
         <div className="login-view callout">
+          <img src={logo} alt="PCoIP Pool Manager" />
+          <h1>Pool Manager</h1>
           <label htmlFor="userLogin">Login</label>
           <input type="text" id="userLogin" value={this.state.userLogin} placeholder="Login"
             onChange={event => this.onChangeProperty('userLogin', event.target.value)}
@@ -61,7 +65,7 @@ class LoginView extends React.Component {
           <input type="password" id="userPassword" value={this.state.userPassword}
             onChange={event => this.onChangeProperty('userPassword', event.target.value)}
           />
-          <Button color="primary" onClick={this.doLogin}>Zaloguj się</Button>
+          <Button isExpanded color="primary" onClick={this.doLogin}>Zaloguj się</Button>
         </div>
       </div>
     )

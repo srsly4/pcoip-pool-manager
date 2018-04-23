@@ -11,3 +11,13 @@
     display: block;
     min-width: 20rem;
 }
+
+.login-view img {
+    max-width: 320px;
+}
+
+.login-view h1 {
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+}
