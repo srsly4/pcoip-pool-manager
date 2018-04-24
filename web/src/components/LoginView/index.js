@@ -72,8 +72,12 @@ class LoginView extends React.Component {
   }
 }
 
+const mapStateToProps = (state) => ({
+  apiUrl: state.user.apiUrl,
+});
+
 const mapDispatchToProps = (dispatch) => ({
   didLogin: (token) => dispatch(actions.user.didLogin(token)),
 });
 
-export default connect(null, mapDispatchToProps)(LoginView)
+export default connect(mapStateToProps, mapDispatchToProps)(LoginView)
