@@ -26,7 +26,7 @@ class LoginView extends React.Component {
           <label htmlFor="userLogin">Login</label>
           <input type="text" id="userLogin" placeholder="Login" />
           <label htmlFor="userPassword">Hasło</label>
-          <input type="password" id="userPassword" />
+          <input type="password" id="userPassword" placeholder="Hasło"/>
           <Button color="primary" onClick={this.doLogin}>Zaloguj się</Button>
         </div>
       </div>

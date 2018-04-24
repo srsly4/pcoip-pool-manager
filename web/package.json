@@ -13,9 +13,13 @@
     "react-redux-form": "^1.16.8",
     "react-router": "^4.2.0",
     "react-router-dom": "^4.2.2",
-    "react-scripts": "1.1.4",
+    "react-scripts": "^1.1.4",
     "redux": "^3.7.2",
-    "redux-thunk": "^2.2.0"
+    "redux-thunk": "^2.2.0",
+    "react-table":"^6.8.2",
+    "namor":"^1.0.1",
+    "react-modal": "^3.4.2",
+    "lodash": "^4.17.5"
   },
   "scripts": {
     "start": "react-scripts start",
