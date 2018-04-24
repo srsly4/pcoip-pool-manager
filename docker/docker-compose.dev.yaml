@@ -12,6 +12,7 @@ services:
       - ../.env
     volumes:
       - ../server/pcoippoolmanager:/server/pcoippoolmanager
+      - ../server/pools:/server/pools
     ports:
       - "8000:8000"
     depends_on:
