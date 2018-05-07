@@ -30,7 +30,7 @@ class MainView extends React.Component {
           </div>
           <div className="top-bar-right">
             <ul className="menu">
-              <li><a href="javascript:void(0);" onClick={ this.doLogout }>Logout</a></li>
+              <li><a href="#" onClick={ this.doLogout }>Logout</a></li>
             </ul>
           </div>
         </div>
