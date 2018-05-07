@@ -9,7 +9,7 @@ jobs:
         - "8"
       cache:
         - yarn
-      script: cd web && yarn install && yarn run test
+      script: cd web && yarn install && yarn build
     - stage: tests
       services:
         - docker
