@@ -1,0 +1,24 @@
+sudo: false
+
+jobs:
+  include:
+    - stage: frontend
+      language: node_js
+      node_js:
+        - "8"
+      cache:
+        - yarn
+      script: cd web && yarn install && yarn run test
+    - stage: tests
+      services:
+        - docker
+      script:
+        - cp docker/test.env ./.env
+        - docker-compose up -d && docker-compose exec api python manage.py test
+
+stages:
+  - name: tests
+    if: type IN (push, pull_request) AND branch IN (master, develop)
+  - name: frontend
+    if: type IN (push, pull_request) AND branch IN (master, develop)
+
