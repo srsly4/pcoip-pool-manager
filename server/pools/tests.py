@@ -32,26 +32,25 @@ class ModelTest(TestCase):
 
 class LoginTest(TestCase):
     def setUp(self):
-        self.user = User.objects.create(username="test", password="testpassword", is_active=True)
+        self.user = User.objects.create_user(username="test", password="testpassword", is_active=True)
         self.user.save()
-        self.client = Client()
-        self.factory = APIRequestFactory()
+        #self.client = Client()
+        #self.factory = APIRequestFactory()
 
     def test_login_correct(self):
-        correct_request = self.factory.post("/auth/", json.dumps({"username": "test", "password": "testpassword"}),
+        correct_request = self.client.post("/auth/", json.dumps({"username": "test", "password": "testpassword"}),
                                             content_type="application/json")
-        print(correct_request.body)
-        self.assertEqual(self.client.post(correct_request).status_code, status.HTTP_200_OK)
+        self.assertEqual(correct_request.status_code, status.HTTP_200_OK)
 
     def test_login_incorrect(self):
-        incorrect_request = self.factory.post("/auth/", json.dumps({"field": "test"}),
+        incorrect_request = self.client.post("/auth/", json.dumps({"field": "test"}),
                                               content_type="application/json")
-        self.assertEqual(self.client.post(incorrect_request).status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(incorrect_request.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_login_no_such_user(self):
-        no_such_user_request = self.factory.post("/auth/", json.dumps({"username": "tset", "password": "tset"}),
+        no_such_user_request = self.client.post("/auth/", json.dumps({"username": "tset", "password": "tset"}),
                                                  content_type="application/json")
-        self.assertEqual(self.client.post(no_such_user_request).status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(no_such_user_request.status_code, status.HTTP_404_NOT_FOUND)
 
 
 class PoolsTest(TestCase):
