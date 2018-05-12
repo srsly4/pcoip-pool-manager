@@ -27,6 +27,8 @@ class ModelTest(TestCase):
 
     def test_can_place_reservation(self):
         self.assertTrue(self.pool.can_place_reservation(3, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
+
+    def test_cannot_place_reservation(self):
         self.assertFalse(self.pool.can_place_reservation(7, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
 
 
