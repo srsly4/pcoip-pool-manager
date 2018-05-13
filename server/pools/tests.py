@@ -2,9 +2,11 @@ import json
 from datetime import datetime
 
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from rest_framework import status
-from rest_framework.test import APIRequestFactory
+from rest_framework.test import APIRequestFactory, APIClient
 from .models import Pool, Reservation
 from .views import login
 
@@ -77,12 +79,19 @@ class PoolsTest(TestCase):
         p4 = {"pool_id": "id4", "displayName": "disp4name", "maximumCount": 8,
               "enabled": True, "description": "description4"}
         js = json.dumps({"pools": [p3, p4]})
-        data = self.client.post("/pools/", js, content_type="application/json")
-        self.assertEquals(200, data.status_code)
-        data = self.client.get("/pools/")
-        j = json.loads(data.content.decode())['pools']
-        self.assertFalse(p1 in j)
-        self.assertFalse(p2 in j)
-        self.assertTrue(p3 in j)
-        self.assertTrue(p4 in j)
+        file = SimpleUploadedFile("pools", b'''
+        "pool_id","displayName","maximumCount","enabled","description"
+        "s7n-girls","Green Lights 4 Girls (Win7)",2,"false","View Agent (6.2.2) Firefox (55.0.3), Chrome (61.0), Flash (27.0.0), Libre Office (5.4.1.2), Adobe Reader DC (17.012), JRE (8u144)"
+        "s7n-gram","Gramatyki grafowe(Win7)",2,"false","View Agent (6.0.1) oraz Firefox (44.0.2), Chrome (49.0), IE (10), Flash (20.0.0), Adobe Reader DC (15.010), Libre Office (5.1.0), JRE 8u73 Dograne, a nie instalowane: GraphTool i LineTree 3D"'))
+        ''', content_type='file')
+        file.name = 'pools'
+        self.client.post("/pools/", {'pools' : file}, content_type="file")
+        # data = self.client.post("/pools/", js, content_type="application/json")
+        # self.assertEquals(200, data.status_code)
+        # data = self.client.get("/pools/")
+        # j = json.loads(data.content.decode())['pools']
+        # self.assertFalse(p1 in j)
+        # self.assertFalse(p2 in j)
+        # self.assertTrue(p3 in j)
+        # self.assertTrue(p4 in j)
 
