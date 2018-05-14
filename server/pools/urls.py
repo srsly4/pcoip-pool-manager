@@ -6,8 +6,8 @@ from . import views
 
 app_name = 'pools'
 urlpatterns = [
-    path('login', views.login, name='login'),
-    path('pools/', views.pools_list),
-    path('reservations/', views.reservation)
+    path('reservations/', views.Reservations.as_view()),
+    path('auth/', views.Authentication.as_view()),
+    path('pools/', views.PoolsList.as_view())
 ]
 
