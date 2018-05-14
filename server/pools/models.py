@@ -25,7 +25,7 @@ class Pool(models.Model):
         :return: Number of slots already reserved
         """
         return sum([reservation.slot_count for reservation in Reservation.objects.filter(pool_id=self.id)
-                    .filter(end_datetime__gt=start, start_datetime__lt=end)])
+                   .filter(end_datetime__gt=start, start_datetime__lt=end)])
 
     def can_place_reservation(self, number_of_slots, start, end):
         """
