@@ -1,11 +1,13 @@
 import csv
 import io
 import json
+from datetime import timedelta, datetime
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework.renderers import JSONRenderer
 from .models import Pool, Reservation
-from rest_framework.parsers import JSONParser, FileUploadParser, MultiPartParser
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
@@ -36,6 +38,22 @@ class Authentication(APIView):
             return Response()
         else:
             return Response(data="Login failed", status=HTTP_404_NOT_FOUND)
+
+
+class Reservation(APIView):
+    parser_classes = (JSONParser, )
+
+    def post(self, request):
+        body = request.data
+        reservation = Reservation(pool=body['pool_id'], user='???', slot_count=body['slot_count'],
+                                    start_datetime=body['start_datetime'],
+                                    end_datetime=body['end_datetime'])
+        if Pool.objects.get(pool_id=body['pool_id']).can_place_reservation(body['slot_count'],
+                                                                           body['start_datetime'], body['end_datetime']):
+            reservation.save()
+            return Response("Reservation added to database", HTTP_201_CREATED)
+        else:
+            return Response("Can't add reservation", HTTP_409_CONFLICT)
 
 
 class Reservations(APIView):
@@ -71,8 +89,40 @@ class Reservations(APIView):
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
-        # TODO: doscuss file format
-        pass
+        file = request.data['reservations']
+        content = io.StringIO(file.file.read().decode('utf-8'))
+        reader = csv.reader(content, delimiter=',')
+        next(reader)
+        reservations = [parse_utils.process_reservation_row(row) for row in reader]
+        to_add = []
+        not_possible = []
+        try:
+            for res in reservations:
+                start = res['start_date']
+                end = res['end_date']
+                while start <= end:
+                    start_time = datetime.datetime.combine(start, res['start_time'])
+                    end_time = datetime.datetime.combine(start, res['end_time'])
+                    # TODO: how to get user ID?
+                    r = Reservation(pool=res['pool_id'], user='???', slot_count=res['slot_count'],
+                                    start_datetime= start_time,
+                                    end_datetime=end_time)
+                    if Pool.object.get(pool_id=res['pool_id']).can_place_reservation(res['slot_count'],
+                                                                                     start_time, end_time):
+                        to_add.append(r)
+                    else:
+                        not_possible.append('pool_id')
+                    start += timedelta(days=res['peroid'])
+        except Exception:
+            return Response("Incorrect reservation description", status=HTTP_400_BAD_REQUEST)
+        if len(not_possible) > 0:
+            text = "Cannot make reservation on slots:\n"
+            for np in not_possible:
+                text += "\t" + np + "\n"
+            return Response(text, status=HTTP_409_CONFLICT)
+        for r in to_add:
+            r.save()
+        return Response("Reservations added to database", status=HTTP_201_CREATED)
 
 
 class PoolsList(APIView):
