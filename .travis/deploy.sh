@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-docker login --username=$DOCKER_LOGIN --password=$DOCKER_PASSWORD
+docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
 
 docker build -f docker/Dockerfile --pull -t "pcoip-pool-manager:latest"
 
