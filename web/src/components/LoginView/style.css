@@ -1,0 +1,23 @@
+.login-view-container {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    background: #eee;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-view {
+    display: block;
+    min-width: 20rem;
+}
+
+.login-view img {
+    max-width: 320px;
+}
+
+.login-view h1 {
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+}
