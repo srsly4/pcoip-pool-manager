@@ -67,7 +67,7 @@ class PoolsTest(TestCase):
     def test_get(self):
         data = self.client.get("/pools/")
         self.assertEquals(status.HTTP_200_OK, data.status_code)
-        j = json.loads(data.content.decode())["pools"]
+        j = json.loads(data.content.decode())
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
               "maximumCount": self.pool1.maximumCount,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
@@ -78,6 +78,7 @@ class PoolsTest(TestCase):
         self.assertTrue(p2 in j)
 
     def test_post(self):
+
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
               "maximumCount": self.pool1.maximumCount,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
@@ -88,11 +89,15 @@ class PoolsTest(TestCase):
               "enabled": False, "description": "description3"}
         p4 = {"pool_id": "id4", "displayName": "disp4name", "maximumCount": 8,
               "enabled": True, "description": "description4"}
-        js = json.dumps({"pools": [p3, p4]})
-        data = self.client.post("/pools/", js, content_type="application/json")
+        file_text = '''"pool_id","displayName","maximumCount","enabled","description"
+"id3","disp3name",50,"false","description3"
+"id4","disp4name",8,"true","description4"
+'''
+        file = SimpleUploadedFile('pools', file_text.encode())
+        data = self.client.post("/pools/", {'pools': file})
         self.assertEquals(status.HTTP_201_CREATED, data.status_code)
         data = self.client.get("/pools/")
-        j = json.loads(data.content.decode())["pools"]
+        j = json.loads(data.content.decode())
         self.assertFalse(p1 in j)
         self.assertFalse(p2 in j)
         self.assertTrue(p3 in j)
