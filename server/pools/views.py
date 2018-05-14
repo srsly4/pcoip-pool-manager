@@ -97,7 +97,6 @@ class PoolsList(APIView):
 
     def post(self, request):
         file = request.data['pools']
-        print("file: " + str(file))
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)
