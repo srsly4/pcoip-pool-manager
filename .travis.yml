@@ -20,6 +20,7 @@ jobs:
         - docker-compose exec api python manage.py migrate
         - docker-compose exec api python manage.py test
     - stage: deploy
+      sudo: required
       services:
         - docker
       script:
