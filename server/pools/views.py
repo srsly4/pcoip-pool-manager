@@ -3,6 +3,8 @@ import io
 import json
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from rest_framework.renderers import JSONRenderer
+
 from .models import Pool, Reservation
 from rest_framework.parsers import JSONParser, FileUploadParser, MultiPartParser
 from rest_framework.response import Response
@@ -87,13 +89,13 @@ class PoolsList(APIView):
     View responsible for updating pools list and getting list of pools
     """
     parser_classes = (MultiPartParser,)
+    renderer_classes = (JSONRenderer, )
 
     def get(self, request):
         pools = list(Pool.objects.values())
         for p in pools:
             del p['id']
-        json_pools = json.dumps({"pools": pools})
-        return Response(json_pools, content_type="application/json")
+        return Response(pools, content_type="application/json")
 
     def post(self, request):
         file = request.data['pools']
@@ -104,7 +106,8 @@ class PoolsList(APIView):
         to_add = []
         try:
             for pool in pools:
-                p = Pool(pool_id=pool[0], displayName=pool[1], maximumCount=pool[2], enabled=pool[3], description=pool[4])
+                p = Pool(pool_id=pool[0], displayName=pool[1], maximumCount=pool[2],
+                         enabled=pool[3], description=pool[4])
                 to_add.append(p)
         except Exception:
             return Response("Incorrect pools description", status=HTTP_400_BAD_REQUEST)
