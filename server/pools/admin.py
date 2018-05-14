@@ -1,8 +1,7 @@
 import csv
 import io
-import sys
 
-from django.contrib import admin
+from django.contrib import admin, messages
 
 from .forms import MultiplePool, MultiplePoolForm
 from .models import Pool, Reservation
@@ -15,25 +14,29 @@ class MultiplePoolAdmin(admin.ModelAdmin):
         if change or request.FILES is None:
             super(MultiplePoolAdmin, self).save_model(request, obj, form, change)
         else:
-            print(request.FILES)
-            self.save(request.FILES['pool_data_file'])
+            try:
+                self.save(request.FILES['pool_data_file'])
+            except Exception as e:
+                messages.debug(request, e)
+                messages.error(request, "File with incorrect data format given")
 
     def save(self, file):
         content = io.StringIO(file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)
-        pools = [self.process_row(row) for row in reader]
-        to_add = []
         try:
+            pools = [self.process_row(row) for row in reader]
+            to_add = []
             for pool in pools:
                 p = Pool(pool_id=pool[0], displayName=pool[1], maximumCount=pool[2], enabled=pool[3],
                          description=pool[4])
                 to_add.append(p)
-        except Exception:
-            print("Incorrect pools description", file=sys.stderr)
-        Pool.objects.all().delete()
-        for p in to_add:
-            p.save()
+        except Exception as e:
+            raise e
+        else:
+            Pool.objects.all().delete()
+            for p in to_add:
+                p.save()
 
     @staticmethod
     def process_row(row):
