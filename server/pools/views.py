@@ -4,13 +4,13 @@ import json
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from rest_framework.renderers import JSONRenderer
-
 from .models import Pool, Reservation
 from rest_framework.parsers import JSONParser, FileUploadParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 from .models import Pool
+from pools.utils import parse_utils
 
 
 class Authentication(APIView):
@@ -36,15 +36,6 @@ class Authentication(APIView):
             return Response()
         else:
             return Response(data="Login failed", status=HTTP_404_NOT_FOUND)
-
-
-# TODO: move to different location
-def process_row(row):
-    for i in range(len(row)):
-        row[i] = row[i].replace('\n', ' ')
-    row[2] = int(row[2])
-    row[3] = True if row[3] == "true" else False
-    return tuple(row)
 
 
 class Reservations(APIView):
@@ -102,7 +93,7 @@ class PoolsList(APIView):
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)
-        pools = [process_row(row) for row in reader]
+        pools = [parse_utils.process_pool_description_row(row) for row in reader]
         to_add = []
         try:
             for pool in pools:
