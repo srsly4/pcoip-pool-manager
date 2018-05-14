@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  db:
+    image: postgres
+  api:
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    command: start-live
+    env_file:
+      - ../.env
+    volumes:
+      - ../server/pcoippoolmanager:/server/pcoippoolmanager
+      - ../server/pools:/server/pools
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db

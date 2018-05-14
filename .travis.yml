@@ -19,10 +19,16 @@ jobs:
         - docker-compose exec api python manage.py makemigrations
         - docker-compose exec api python manage.py migrate
         - docker-compose exec api python manage.py test
+    - stage: deploy
+      services:
+        - docker
+      script:
+        - bash .travis/deploy.sh
 
 stages:
   - name: tests
     if: type IN (push, pull_request) AND branch IN (master, develop)
   - name: frontend
     if: type IN (push, pull_request) AND branch IN (master, develop)
-
+  - name: deploy
+    if: type IN (push) AND branch IN (master)
