@@ -27,8 +27,8 @@ jobs:
 
 stages:
   - name: tests
-    if: type IN (push, pull_request) AND branch IN (master, develop)
+    if: (type == pull_request AND branch IN (master, develop)) OR (type == push AND branch == develop )
   - name: frontend
-    if: type IN (push, pull_request) AND branch IN (master, develop)
+    if: (type == pull_request AND branch IN (master, develop)) OR (type == push AND branch == develop )
   - name: deploy
-    if: type IN (push) AND branch IN (master)
+    if: type == push AND branch == master
