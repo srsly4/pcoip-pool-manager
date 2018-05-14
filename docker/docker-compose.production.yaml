@@ -4,9 +4,7 @@ services:
   db:
     image: postgres
   api:
-    build:
-      context: ../
-      dockerfile: docker/Dockerfile
+    image: srsly4/pcoip-pool-manager
     command: start-live
     env_file:
       - ../.env
