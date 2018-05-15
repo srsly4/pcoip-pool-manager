@@ -1,4 +1,5 @@
 import React from 'react';
+import {connect} from 'react-redux';
 
 // Import React Table
 import ReactTable from "react-table";
@@ -8,7 +9,7 @@ import fetch from "isomorphic-fetch";
 import matchSorter from 'match-sorter'
 
 
-export default class PoolsView extends React.Component {
+class PoolsView extends React.Component {
     constructor() {
         super();
         this.state = {
@@ -18,7 +19,7 @@ export default class PoolsView extends React.Component {
     }
 
     makeData() {
-        return fetch(`http://localhost:8000/pools/`)
+        return fetch(`${this.props.apiUrl}/pools/`)
             .then(resp => resp.json())
             .then(resp => {
                 //console.log(resp['pools'].className);
@@ -76,4 +77,8 @@ export default class PoolsView extends React.Component {
     }
 }
 
+const mapStateToProps = (state) => ({
+    apiUrl: state.user.apiUrl,
+});
 
+export default connect(mapStateToProps)(PoolsView);
