@@ -22,6 +22,6 @@ COPY docker /server/docker
 RUN chmod a+rx ./docker/entrypoint.sh
 
 CMD python3 manage.py runserver 0.0.0.0:8000
-ENTRYPOINT ["./docker/entrypoint.sh"]
+ENTRYPOINT ["sh", "./docker/entrypoint.sh"]
 
 EXPOSE 8000

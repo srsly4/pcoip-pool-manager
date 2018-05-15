@@ -1,7 +1,7 @@
 const INITIAL_STATE = {
   data: null,
   token: null,
-  apiUrl: 'http://localhost:8000'
+  apiUrl: process.env.REACT_APP_API_URL || 'http://localhost:8000'
 };
 
 export default function userReducer(state = INITIAL_STATE, action) {
