@@ -10,21 +10,18 @@ import matchSorter from 'match-sorter'
 
 
 class PoolsView extends React.Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             data: []
         };
-        this.makeData();
     }
 
-    makeData() {
-        return fetch(`${this.props.apiUrl}/pools/`)
+    componentDidMount() {
+        fetch(`${this.props.apiUrl}/pools/`)
             .then(resp => resp.json())
             .then(resp => {
-                //console.log(resp['pools'].className);
-                this.setState({data: resp['pools']})
-                return resp['pools']
+                this.setState({data: resp['pools']});
             })
     }
 
