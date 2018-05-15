@@ -1,4 +1,6 @@
 # pcoip-pool-manager
+[![Build Status](https://travis-ci.org/srsly4/pcoip-pool-manager.svg?branch=master)](https://travis-ci.org/srsly4/pcoip-pool-manager)
+
 ## Development instance
 To run the auto-updating backend script copy the env file into the project's root directory:
 ```
