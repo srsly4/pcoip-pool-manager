@@ -7,25 +7,9 @@ from django.test import TestCase, Client
 from rest_framework import status
 from rest_framework.test import APIRequestFactory
 from .models import Pool, Reservation
-from .views import Authentication
 
 
 # Create your tests here.
-
-
-class ModelTest(TestCase):
-    def setUp(self):
-        self.pool = Pool.objects.create(pool_id="1", displayName="1", maximumCount=10)
-        self.user = User.objects.create(username="test", password="test")
-        Reservation.objects.create(pool_id=self.pool.id, user_id=self.user.id, slot_count=5,
-                                   start_datetime=datetime(2018, 4, 1, 11, 15),
-                                   end_datetime=datetime(2018, 4, 1, 12, 45))
-
-    # def test_can_place_reservation(self):
-    #     self.assertTrue(self.pool.can_place_reservation(3, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
-    #
-    # def test_cannot_place_reservation(self):
-    #     self.assertFalse(self.pool.can_place_reservation(7, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
 
 
 class TestSimpleReservedSlots(TestCase):
