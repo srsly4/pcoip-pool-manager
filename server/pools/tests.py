@@ -12,24 +12,117 @@ from .views import Authentication, PoolsList
 # Create your tests here.
 
 
-class ModelTest(TestCase):
+class TestSimpleReservedSlots(TestCase):
     def setUp(self):
         self.pool = Pool.objects.create(pool_id="1", displayName="1", maximumCount=10)
         self.user = User.objects.create(username="test", password="test")
-        Reservation.objects.create(pool_id=self.pool.id, user_id=self.user.id, slot_count=5,
-                                   start_datetime=datetime(2018, 4, 1, 11, 15),
-                                   end_datetime=datetime(2018, 4, 1, 12, 45))
 
-    def test_already_reserved_slots(self):
+    def test_no_reservation(self):
         self.assertEqual(
-            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 12, 30)),
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 15), datetime(2018, 4, 1, 12, 15)),
+            0)
+
+
+class TestSingleReservedSlots(TestCase):
+    def setUp(self):
+        self.pool = Pool.objects.create(pool_id="1", displayName="1", maximumCount=10)
+        self.pool.save()
+        self.user = User.objects.create_user(username="test", password="test", is_active=True)
+        self.user.save()
+        self.res = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user.id, slot_count=5,
+                                              start_datetime=datetime(2018, 4, 1, 11, 15),
+                                              end_datetime=datetime(2018, 4, 1, 12, 45))
+        self.res.save()
+
+    def test_reservation_before(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 10, 00), datetime(2018, 4, 1, 11, 10)),
+            0)
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 10, 15), datetime(2018, 4, 1, 11, 15)),
+            0)
+
+    def test_reservation_after(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 12, 50), datetime(2018, 4, 1, 12, 55)),
+            0)
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 12, 45), datetime(2018, 4, 1, 12, 55)),
+            0)
+
+    def test_reservation_inside(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 20), datetime(2018, 4, 1, 12, 40)),
+            5)
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 15), datetime(2018, 4, 1, 12, 45)),
             5)
 
-    def test_can_place_reservation(self):
-        self.assertTrue(self.pool.can_place_reservation(3, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
+    def test_reservation_right_overlap(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 12, 00)),
+            5)
 
-    def test_cannot_place_reservation(self):
-        self.assertFalse(self.pool.can_place_reservation(7, datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)))
+    def test_reservation_left_overlap(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 12, 00), datetime(2018, 4, 1, 13, 00)),
+            5)
+
+    def test_reservation_overlap(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 13, 00)),
+            5)
+
+
+class TestMultipleReservedSlot(TestCase):
+    def setUp(self):
+        self.pool = Pool.objects.create(pool_id="1", displayName="1", maximumCount=100)
+        self.pool.save()
+        self.user1 = User.objects.create_user(username="test1", password="test1", is_active=True)
+        self.user1.save()
+        self.user2 = User.objects.create_user(username="test2", password="test2", is_active=True)
+        self.user2.save()
+        self.user3 = User.objects.create_user(username="test3", password="test3", is_active=True)
+        self.user3.save()
+        self.user4 = User.objects.create_user(username="test4", password="test4", is_active=True)
+        self.user4.save()
+        self.res1 = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user1.id, slot_count=5,
+                                               start_datetime=datetime(2018, 4, 1, 11, 15),
+                                               end_datetime=datetime(2018, 4, 1, 12, 45))
+        self.res1.save()
+        self.res2 = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user1.id, slot_count=10,
+                                               start_datetime=datetime(2018, 4, 1, 13, 00),
+                                               end_datetime=datetime(2018, 4, 1, 15, 00))
+        self.res2.save()
+        self.res3 = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user2.id, slot_count=15,
+                                               start_datetime=datetime(2018, 4, 1, 12, 00),
+                                               end_datetime=datetime(2018, 4, 1, 14, 00))
+        self.res3.save()
+        self.res4 = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user3.id, slot_count=20,
+                                               start_datetime=datetime(2018, 4, 1, 12, 50),
+                                               end_datetime=datetime(2018, 4, 1, 16, 00))
+        self.res4.save()
+        self.res5 = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user1.id, slot_count=20,
+                                               start_datetime=datetime(2018, 4, 1, 17, 00),
+                                               end_datetime=datetime(2018, 4, 1, 18, 00))
+        self.res5.save()
+
+    def test_overlapping_reservations(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 30), datetime(2018, 4, 1, 13, 00)),
+            40)
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 12, 50)),
+            20)
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 00), datetime(2018, 4, 1, 18, 00)),
+            45)
+
+    def test_non_overlapping_reservations(self):
+        self.assertEqual(
+            self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 30), datetime(2018, 4, 1, 13, 00)),
+            40)
+
 
 class LoginTest(TestCase):
     def setUp(self):
