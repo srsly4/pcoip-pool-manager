@@ -1,25 +1,22 @@
-import json
 from django.contrib.auth import authenticate
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
-from django.views.decorators.csrf import csrf_exempt
-from rest_framework.parsers import JSONParser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 
-from .models import Pool
+from .models import Pool, ExpirableToken
 
 
 class Authentication(APIView):
     """
     View responsible for logging user by the given credentials using Django session manager
     """
-    parser_classes = (JSONParser,)
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         """
         :param request: HTTPRequest, body made of JSON containing fields "username" and "password"
-        :return: 200 if user exists
+        :return: 200 if user exists, message body contains string token needed for further operations
         :raise: 404 if login fails due to unrecognized username or password
         """
         try:
@@ -30,7 +27,8 @@ class Authentication(APIView):
             return Response("Incorrect request body", status=HTTP_400_BAD_REQUEST)
         user = authenticate(username=username, password=password)
         if user is not None:
-            return Response()
+            token = ExpirableToken.objects.get_or_create(user=user)[0].replace()
+            return Response(data=token.key)
         else:
             return Response(data="Login failed", status=HTTP_404_NOT_FOUND)
 
@@ -40,7 +38,6 @@ class Reservation(APIView):
 
 
 class PoolsList(APIView):
-    parser_classes = (JSONParser,)
 
     def get(self, request):
         pools = list(Pool.objects.values())
