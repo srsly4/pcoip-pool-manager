@@ -1,6 +1,5 @@
 import React from 'react';
 import Modal from 'react-modal';
-
 const customStyles = {
     content : {
         top                   : '50%',
@@ -55,6 +54,7 @@ export default class App extends React.Component {
                         <p>Info:</p>
                         <p>{this.props.info}</p>
                     </div>
+
                     <button onClick={this.closeModal}>Rezerwuj</button>
                 </Modal>
             </div>

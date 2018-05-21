@@ -4,7 +4,7 @@ import io
 from django.contrib import admin, messages
 
 from .forms import MultiplePool, MultiplePoolForm
-from .models import Pool, Reservation
+from .models import Pool, Reservation, ExpirableToken
 
 
 class MultiplePoolAdmin(admin.ModelAdmin):
@@ -51,3 +51,4 @@ class MultiplePoolAdmin(admin.ModelAdmin):
 admin.site.register(Pool)
 admin.site.register(MultiplePool, MultiplePoolAdmin)
 admin.site.register(Reservation)
+admin.site.register(ExpirableToken)
