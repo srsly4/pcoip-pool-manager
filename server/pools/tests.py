@@ -124,7 +124,6 @@ class TestMultipleReservedSlot(TestCase):
             40)
 
 
-
 class LoginTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="test", password="testpassword", is_active=True)
