@@ -40,7 +40,7 @@ class Authentication(APIView):
             return Response(data="Login failed", status=HTTP_404_NOT_FOUND)
 
 
-class Reservation(APIView):
+class SingleReservation(APIView):
     parser_classes = (JSONParser, )
 
     def post(self, request):
@@ -49,7 +49,8 @@ class Reservation(APIView):
                                     start_datetime=body['start_datetime'],
                                     end_datetime=body['end_datetime'])
         if Pool.objects.get(pool_id=body['pool_id']).can_place_reservation(body['slot_count'],
-                                                                           body['start_datetime'], body['end_datetime']):
+                                                                           body['start_datetime'],
+                                                                           body['end_datetime']):
             reservation.save()
             return Response("Reservation added to database", HTTP_201_CREATED)
         else:
