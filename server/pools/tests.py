@@ -8,7 +8,7 @@ from django.test import TestCase, Client
 from rest_framework import status
 from rest_framework.test import APIRequestFactory, force_authenticate
 from .models import Pool, Reservation, ExpirableToken
-from .views import Authentication, PoolsList
+from .views import Authentication, PoolsList, SingleReservation, Reservations
 
 
 # Create your tests here.
@@ -115,3 +115,78 @@ class PoolsTest(TestCase):
         self.assertFalse(p2 in j)
         self.assertTrue(p3 in j)
         self.assertTrue(p4 in j)
+
+
+class SingleReservationTest(TestCase):
+    def setUp(self):
+        self.pool = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
+                                         enabled=True, description="desc1")
+        self.pool.save()
+
+        self.user = User.objects.create_user(username="user", password="testtesttest", email="testmail@mail.mail")
+        self.user.save()
+        token = ExpirableToken.objects.create(user=self.user, key=123123123123)
+        token.save()
+        self.key = token.key
+        self.factory = APIRequestFactory()
+        self.view = SingleReservation.as_view()
+
+    def test_success(self):
+        data = {"pool_id": "id1", "slot_count": 2, "start_datetime": "2018-05-20 12:00",
+                "end_datetime": "2018-05-20 14:00"}
+        request = self.factory.post("/pools/", data=data, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_201_CREATED, data.status_code)
+        res = Reservation.objects.filter(pool=self.pool)
+        self.assertEqual(len(res), 1)
+
+    def test_fail(self):
+        data = {"pool_id": "id1", "slot_count": 50, "start_datetime": "2018-05-20 12:00",
+                "end_datetime": "2018-05-20 14:00"}
+        request = self.factory.post("/pools/", data=data, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_409_CONFLICT, data.status_code)
+        res = Reservation.objects.filter(pool=self.pool)
+        self.assertEqual(len(res), 0)
+
+
+class ReservationsTestGet(TestCase):
+    def setUp(self):
+        self.pool1 = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
+                                        enabled=True, description="desc1")
+        self.pool1.save()
+        self.pool2 = Pool.objects.create(pool_id="id2", displayName="name2", maximumCount=20,
+                                        enabled=True, description="desc2")
+        self.pool2.save()
+        self.user1 = User.objects.create_user(username="user1", password="testtesttest1", email="testmail1@mail.mail")
+        self.user1.save()
+        self.user2 = User.objects.create_user(username="user2", password="testtesttest2", email="testmail2@mail.mail")
+        self.user2.save()
+        token1 = ExpirableToken.objects.create(user=self.user1, key=123123123123)
+        token1.save()
+        self.key1 = token1.key
+        token2 = ExpirableToken.objects.create(user=self.user2, key=321321321321)
+        token2.save()
+        self.key2 = token2.key
+        self.res1 = Reservation.objects.create(pool=self.pool1, user=self.user1, slot_count=5,
+                                               start_datetime=datetime(2018, 4, 1, 11, 15),
+                                               end_datetime=datetime(2018, 4, 1, 12, 45))
+        self.res1.save()
+        self.res2 = Reservation.objects.create(pool=self.pool1, user=self.user1, slot_count=5,
+                                               start_datetime=datetime(2018, 4, 1, 13, 15),
+                                               end_datetime=datetime(2018, 4, 1, 15, 45))
+        self.res2.save()
+        self.res3 = Reservation.objects.create(pool=self.pool2, user=self.user2, slot_count=4,
+                                               start_datetime=datetime(2018, 4, 1, 13, 15),
+                                               end_datetime=datetime(2018, 4, 1, 15, 45))
+        self.res3.save()
+        self.factory = APIRequestFactory()
+        self.view = Reservations.as_view()
+
+    def test_1(self):
+        request = self.factory.get("/pools/")
+        force_authenticate(request=request, user=self.user1, token=self.key1)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_200_OK, data.status_code)
