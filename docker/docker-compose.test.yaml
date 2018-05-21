@@ -1,15 +1,18 @@
-version: '2'
+version: '3'
 
 services:
   db:
     image: postgres
-    volumes:
-      - /var/lib/postgresql/data:/var/lib/postgresql/data
   api:
-    image: srsly4/pcoip-pool-manager
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
     command: bash ./docker/wait-for-it.sh db:5432 -- python3 manage.py runserver 0.0.0.0:8000
     env_file:
       - ../.env
+    volumes:
+      - ../server/pcoippoolmanager:/server/pcoippoolmanager
+      - ../server/pools:/server/pools
     ports:
       - "8000:8000"
     depends_on:
