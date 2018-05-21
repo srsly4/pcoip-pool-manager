@@ -6,9 +6,9 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, Client
 from rest_framework import status
-from rest_framework.test import APIRequestFactory, APIClient
-from .models import Pool, Reservation
-from .views import Authentication
+from rest_framework.test import APIRequestFactory, force_authenticate
+from .models import Pool, Reservation, ExpirableToken
+from .views import Authentication, PoolsList
 
 
 # Create your tests here.
@@ -63,9 +63,18 @@ class PoolsTest(TestCase):
                                          enabled=False, description="desc2")
         self.pool1.save()
         self.pool2.save()
+        self.user = User.objects.create_user(username="user", password="testtesttest", email="testmail@mail.mail")
+        self.user.save()
+        token = ExpirableToken.objects.create(user=self.user, key=123123123123)
+        token.save()
+        self.key = token.key
+        self.factory = APIRequestFactory()
+        self.view = PoolsList.as_view()
 
     def test_get(self):
-        data = self.client.get("/pools/")
+        request = self.factory.get("/pools/")
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
         self.assertEquals(status.HTTP_200_OK, data.status_code)
         j = json.loads(data.content.decode())
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
@@ -78,7 +87,6 @@ class PoolsTest(TestCase):
         self.assertTrue(p2 in j)
 
     def test_post(self):
-
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
               "maximumCount": self.pool1.maximumCount,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
@@ -89,14 +97,19 @@ class PoolsTest(TestCase):
               "enabled": False, "description": "description3"}
         p4 = {"pool_id": "id4", "displayName": "disp4name", "maximumCount": 8,
               "enabled": True, "description": "description4"}
+
         file_text = '''"pool_id","displayName","maximumCount","enabled","description"
 "id3","disp3name",50,"false","description3"
 "id4","disp4name",8,"true","description4"
 '''
-        file = SimpleUploadedFile('pools', file_text.encode())
-        data = self.client.post("/pools/", {'pools': file})
+        file = SimpleUploadedFile('pools.csv', file_text.encode())
+        request = self.factory.post("/pools/", data={'pools': file}, format='multipart')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
         self.assertEquals(status.HTTP_201_CREATED, data.status_code)
-        data = self.client.get("/pools/")
+        request = self.factory.get("/pools/")
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
         j = json.loads(data.content.decode())
         self.assertFalse(p1 in j)
         self.assertFalse(p2 in j)

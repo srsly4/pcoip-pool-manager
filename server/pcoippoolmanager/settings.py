@@ -24,7 +24,7 @@ SECRET_KEY = '3tq)3v!*s2n_v5w)*(z$1&wag&h7&cn4i6mrscz0dll11iy4u@'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['ec2-34-227-194-105.compute-1.amazonaws.com']
 
 # Application definition
 
@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.admindocs',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders'
 ]
 
@@ -57,7 +58,10 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.JSONParser',
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.BasicAuthentication',
+        'pools.token_auth.ExpiringTokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
     ),
 }
 
@@ -128,7 +132,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
@@ -139,5 +143,6 @@ CORS_ORIGIN_ALLOW_ALL = False
 
 CORS_ORIGIN_WHITELIST = (
     'localhost:3000',
-    '127.0.0.1:3000'
+    '127.0.0.1:3000',
+    'ec2-34-227-194-105.compute-1.amazonaws.com'
 )
