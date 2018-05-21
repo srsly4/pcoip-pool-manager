@@ -116,7 +116,6 @@ class PoolsTest(TestCase):
         self.assertTrue(p3 in j)
         self.assertTrue(p4 in j)
 
-
 class SingleReservationTest(TestCase):
     def setUp(self):
         self.pool = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
@@ -131,7 +130,7 @@ class SingleReservationTest(TestCase):
         self.factory = APIRequestFactory()
         self.view = SingleReservation.as_view()
 
-    def test_success(self):
+    def test_success_post(self):
         data = {"pool_id": "id1", "slot_count": 2, "start_datetime": "2018-05-20 12:00",
                 "end_datetime": "2018-05-20 14:00"}
         request = self.factory.post("/pools/", data=data, format='json')
@@ -141,7 +140,7 @@ class SingleReservationTest(TestCase):
         res = Reservation.objects.filter(pool=self.pool)
         self.assertEqual(len(res), 1)
 
-    def test_fail(self):
+    def test_fail_post(self):
         data = {"pool_id": "id1", "slot_count": 50, "start_datetime": "2018-05-20 12:00",
                 "end_datetime": "2018-05-20 14:00"}
         request = self.factory.post("/pools/", data=data, format='json')
@@ -150,6 +149,57 @@ class SingleReservationTest(TestCase):
         self.assertEquals(status.HTTP_409_CONFLICT, data.status_code)
         res = Reservation.objects.filter(pool=self.pool)
         self.assertEqual(len(res), 0)
+
+    def create_reservation(self):
+        res = Reservation.objects.create(
+            pool=self.pool, user=self.user, slot_count=1,
+            start_datetime=datetime(2018, 4, 1, 11, 15),
+            end_datetime=datetime(2018, 4, 1, 12, 15)
+        )
+        res.save()
+        return res.id
+
+    def get_response(self, res_id):
+        request = self.factory.delete(
+            "/reservation/",
+            data={"id": res_id},
+            format='json'
+        )
+        force_authenticate(request, self.user, self.key)
+        response = self.view(request).render()
+        return response
+
+    def check_if_is_deleted(self, res_id):
+        reservation_num = len(Reservation.objects.filter(id=res_id))
+        self.assertEqual(reservation_num, 0)
+
+    def test_delete(self):
+        total_res = 5
+        reservation_id = [self.create_reservation() for _ in range(total_res)]
+
+        response = self.get_response(reservation_id[0])
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.check_if_is_deleted(reservation_id[0])
+
+        for i in range(1, total_res):
+            reservation_num = len(Reservation.objects.filter(id=reservation_id[i]))
+            self.assertEqual(reservation_num, 1)
+
+    def test_double_delete(self):
+        res_id = self.create_reservation()
+        response = self.get_response(res_id)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.check_if_is_deleted(res_id)
+        response = self.get_response(res_id)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_never_existed(self):
+        res_id = self.create_reservation()
+        self.check_if_is_deleted(res_id + 1)
+        response = self.get_response(res_id + 1)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
 
 
 class ReservationsTestGet(TestCase):
