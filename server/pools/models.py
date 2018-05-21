@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-import pytz
+
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -24,21 +24,8 @@ class Pool(models.Model):
         :param end: Datetime of finish of reservation
         :return: Number of slots already reserved
         """
-        reservations = list(Reservation.objects
-                            .filter(pool=self)
-                            .filter(start_datetime__lt=end)
-                            .filter(end_datetime__gt=start))
-        all_times = [r.start_datetime for r in reservations] + [r.end_datetime for r in reservations] + [start, end]
-        all_times.sort()
-        max_used = 0
-        for i in range(0, len(all_times) - 1):
-            used = 0
-            for r in reservations:
-                if not (r.start_datetime > all_times[i + 1] or r.end_datetime < all_times[i]):
-                    used += r.slot_count
-            if used > max_used:
-                max_used = used
-        return max_used
+        return sum([reservation.slot_count for reservation in Reservation.objects.filter(pool_id=self.id)
+                   .filter(end_datetime__gt=start, start_datetime__lt=end)])
 
     def can_place_reservation(self, number_of_slots, start, end):
         """

@@ -1,4 +1,7 @@
+import json
 from django.contrib.auth import authenticate
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseNotFound
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework.status import *
@@ -30,6 +33,10 @@ class Authentication(APIView):
             return Response()
         else:
             return Response(data="Login failed", status=HTTP_404_NOT_FOUND)
+
+
+class Reservation(APIView):
+    pass
 
 
 class PoolsList(APIView):
