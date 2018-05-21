@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
+from datetime import datetime
+
 from django.contrib.auth.models import User
 from django.db import models
+from rest_framework.authtoken.models import Token
 
 
 # Create your models here.
@@ -47,3 +50,33 @@ class Reservation(models.Model):
     slot_count = models.PositiveSmallIntegerField(default=0)
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
+
+
+class ExpirableToken(Token):
+    """
+    Extension of Django REST Framework's default Token Authentication model.
+    """
+    # DurationField seems bugged, I will try to implement not hardcoded expiration time, but need to ask some questions
+    # first. Please, for the time being, do not remove the commented code.
+    # expiration_time = models.DurationField(default=timedelta(hours=1))
+    last_refresh_datetime = models.DateTimeField(auto_now_add=True)
+
+    def __init__(self, *args, **kwargs):
+        super(ExpirableToken, self).__init__(*args, **kwargs)
+
+    def __str__(self):
+        return self.user.username
+
+    def generate_key(self):
+        Token.objects.filter(user=self.user).delete()
+        self.last_refresh_datetime = datetime.now()
+        return super(ExpirableToken, self).generate_key()
+
+    def replace(self):
+        self.key = self.generate_key()
+        self.save()
+        return self
+
+    def refresh(self):
+        self.save()
+        return self
