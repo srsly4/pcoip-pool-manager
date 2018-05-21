@@ -35,8 +35,8 @@ class Authentication(APIView):
             return Response(data="Login failed", status=HTTP_404_NOT_FOUND)
 
 
-class Reservation(APIView):
-    pass
+# class Reservation(APIView):
+#     pass
 
 
 class PoolsList(APIView):
