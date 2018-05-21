@@ -43,16 +43,23 @@ class Authentication(APIView):
 
 
 class SingleReservation(APIView):
+    """
+    View responsible for adding a single reservation to database
+    """
     parser_classes = (JSONParser, )
 
     def post(self, request):
+        """
+        :param request: HTTPRequest, body made of JSON containing pool_id, slot_count, start_datetime and end_datetime
+        :return: 201 if reservation is added to database
+        :raise: 409 if reservation can't be added to database
+        """
         body = request.data
-        reservation = Reservation(pool=body['pool_id'], user='???', slot_count=body['slot_count'],
-                                    start_datetime=body['start_datetime'],
-                                    end_datetime=body['end_datetime'])
-        if Pool.objects.get(pool_id=body['pool_id']).can_place_reservation(body['slot_count'],
-                                                                           body['start_datetime'],
-                                                                           body['end_datetime']):
+        pool = Pool.objects.get(pool_id=body['pool_id'])
+        if pool.can_place_reservation(body['slot_count'],body['start_datetime'], body['end_datetime']):
+            reservation = Reservation(pool=pool, user=request.user, slot_count=body['slot_count'],
+                                      start_datetime=body['start_datetime'],
+                                      end_datetime=body['end_datetime'])
             reservation.save()
             return Response("Reservation added to database", HTTP_201_CREATED)
         else:
@@ -64,22 +71,28 @@ class Reservations(APIView):
     View responsible for adding new reservations and getting list of all reservations
     """
     parser_classes = (JSONParser,)
+
     def get(self, request):
+        """
+        :param request: HTTPRequest used only to authenticate user
+        :parameter start: start of time interval in which reservations are searched, not required
+        :parameter end: end of time interval in which reservations are searched, not required
+        :parameter pid: id of pool to search, not required
+        :return: 200, contains json with all reservations
+        """
         filters = {}
-        start_datetime = request.GET.get('sd')
+        start_datetime = request.GET.get('start')
         if start_datetime is not None:
             filters["start_datetime__gte"] = start_datetime
-        end_datetime = request.GET.get('ed')
+        end_datetime = request.GET.get('end')
         if end_datetime is not None:
             filters["end_datetime__lte"] = end_datetime
         pid = request.GET.get('pid')
         if pid is not None:
-            pool_id = Pool.objects.get(pool_id=pid).id
-            filters["pool_id"] = pool_id
-        uid = request.GET.get('uid')
-        if uid is not None:
-            user_id = User.objects.get(username=uid).id
-            filters["user_id"] = user_id
+            pool = Pool.objects.get(pool_id=pid)
+            filters["pool"] = pool
+        user = request.user
+        filters["user"] = user
         reservations = list(Reservation.objects.filter(**filters))
         json_reservations = [r.__dict__ for r in reservations]
         for r in json_reservations:
@@ -91,6 +104,13 @@ class Reservations(APIView):
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
+        """
+        :param request: HTTPRequest containing file(named 'reservations') with reservations list
+        :return: 201 if reservations has been added to database
+        :raise: 409 if there is a conflict with different reservations,
+                response text contains list of impossible reservations
+        :raise: 400 if file format isn't correct
+        """
         file = request.data['reservations']
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
@@ -105,8 +125,8 @@ class Reservations(APIView):
                 while start <= end:
                     start_time = datetime.datetime.combine(start, res['start_time'])
                     end_time = datetime.datetime.combine(start, res['end_time'])
-                    # TODO: how to get user ID?
-                    r = Reservation(pool=res['pool_id'], user='???', slot_count=res['slot_count'],
+                    user = request.user
+                    r = Reservation(pool=res['pool_id'], user=user, slot_count=res['slot_count'],
                                     start_datetime= start_time,
                                     end_datetime=end_time)
                     if Pool.object.get(pool_id=res['pool_id']).can_place_reservation(res['slot_count'],
@@ -135,12 +155,21 @@ class PoolsList(APIView):
     renderer_classes = (JSONRenderer, )
 
     def get(self, request):
+        """
+        :param request: used only for authentication
+        :return: 200 with a JSON containing all pools
+        """
         pools = list(Pool.objects.values())
         for p in pools:
             del p['id']
         return Response(pools, content_type="application/json")
 
     def post(self, request):
+        """
+        :param request: HTTPRequest containing file(named 'pools') with pools description
+        :return: 201 if pools has been added to database
+        :raise: 400 if file format isn't correct
+        """
         file = request.data['pools']
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
