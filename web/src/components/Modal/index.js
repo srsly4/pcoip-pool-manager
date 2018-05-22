@@ -85,7 +85,7 @@ class App extends React.Component {
             },
             body: JSON.stringify({
                 pool_id: this.props.poolId,
-                slot_count: parseInt(this.state.poolCount),
+                slot_count: parseInt(this.state.poolCount,10),
                 start_datetime: this.state.startDate.format("YYYY-MM-DD HH:mm:ss"),
                 end_datetime: this.state.endDate.format("YYYY-MM-DD HH:mm:ss"),
             })
