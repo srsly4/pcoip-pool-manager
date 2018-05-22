@@ -54,23 +54,26 @@ class SingleReservation(APIView):
         :return: 201 if reservation is added to database
         :raise: 409 if reservation can't be added to database
         """
-        body = request.data
-        pool = Pool.objects.get(pool_id=body['pool_id'])
-        if pool.can_place_reservation(body['slot_count'], body['start_datetime'], body['end_datetime']):
-            reservation = Reservation(pool=pool, user=request.user, slot_count=body['slot_count'],
-                                      start_datetime=body['start_datetime'],
-                                      end_datetime=body['end_datetime'])
-            reservation.save()
-            return Response("Reservation added to database", HTTP_201_CREATED)
-        else:
-            return Response("Can't add reservation", HTTP_409_CONFLICT)
+        try:
+            body = request.data
+            pool = Pool.objects.get(pool_id=body['pool_id'])
+            if pool.can_place_reservation(body['slot_count'], body['start_datetime'], body['end_datetime']):
+                reservation = Reservation(pool=pool, user=request.user, slot_count=body['slot_count'],
+                                          start_datetime=body['start_datetime'],
+                                          end_datetime=body['end_datetime'])
+                reservation.save()
+                return Response("Reservation added to database", HTTP_201_CREATED)
+            else:
+                return Response("Can't add reservation", HTTP_409_CONFLICT)
+        except KeyError:
+            return Response("Incorrect JSON format", HTTP_400_BAD_REQUEST)
 
 
 class Reservations(APIView):
     """
     View responsible for adding new reservations and getting list of all reservations
     """
-    parser_classes = (JSONParser,)
+    parser_classes = (JSONParser, MultiPartParser,)
 
     def get(self, request):
         """
@@ -94,13 +97,7 @@ class Reservations(APIView):
         user = request.user
         filters["user"] = user
         reservations = list(Reservation.objects.filter(**filters))
-        json_reservations = [r.__dict__ for r in reservations]
-        for r in json_reservations:
-            del r['id']
-            del r['_state']
-            r['start_datetime'] = str(r['start_datetime'])
-            r['end_datetime'] = str(r['end_datetime'])
-        json_reservations = json.dumps({"reservations": json_reservations})
+        json_reservations = {"reservations": [parse_utils.make_JSON(r) for r in reservations]}
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
@@ -115,32 +112,39 @@ class Reservations(APIView):
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)
-        reservations = [parse_utils.process_reservation_row(row) for row in reader]
+        try:
+            reservations = [parse_utils.process_reservation_row(row) for row in reader]
+        except (KeyError, ValueError):
+            return Response("Wrong file format", status=HTTP_400_BAD_REQUEST)
+
         to_add = []
         not_possible = []
+        user = request.user
         try:
             for res in reservations:
                 start = res['start_date']
                 end = res['end_date']
                 while start <= end:
-                    start_time = datetime.datetime.combine(start, res['start_time'])
-                    end_time = datetime.datetime.combine(start, res['end_time'])
-                    user = request.user
-                    r = Reservation(pool=res['pool_id'], user=user, slot_count=res['slot_count'],
-                                    start_datetime= start_time,
-                                    end_datetime=end_time)
-                    if Pool.object.get(pool_id=res['pool_id']).can_place_reservation(res['slot_count'],
-                                                                                     start_time, end_time):
+                    start_time = datetime.combine(start, res['start_time'])
+                    end_time = datetime.combine(start, res['end_time'])
+                    pool = Pool.objects.get(pool_id=res['pool_id'])
+                    if pool.can_place_reservation(res['slot_count'], start_time, end_time):
+                        r = Reservation(pool=pool, user=user, slot_count=res['slot_count'],
+                                        start_datetime=start_time,
+                                        end_datetime=end_time)
                         to_add.append(r)
                     else:
-                        not_possible.append('pool_id')
+                        not_possible.append(('pool_id', start_time, end_time))
+
+                    if res['peroid'] <= 0:
+                        break
                     start += timedelta(days=res['peroid'])
         except Exception:
             return Response("Incorrect reservation description", status=HTTP_400_BAD_REQUEST)
         if len(not_possible) > 0:
             text = "Cannot make reservation on slots:\n"
             for np in not_possible:
-                text += "\t" + np + "\n"
+                text += "\t" + np[0] + "from " + str(np[1]) + " to " + str(np[2]) + "\n"
             return Response(text, status=HTTP_409_CONFLICT)
         for r in to_add:
             r.save()
