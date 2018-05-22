@@ -80,7 +80,7 @@ class Reservations(APIView):
     """
     View responsible for adding new reservations and getting list of all reservations
     """
-    parser_classes = (JSONParser,)
+    parser_classes = (JSONParser, MultiPartParser)
 
     def get(self, request):
         """
@@ -110,7 +110,6 @@ class Reservations(APIView):
             del r['_state']
             r['start_datetime'] = str(r['start_datetime'])
             r['end_datetime'] = str(r['end_datetime'])
-        json_reservations = json.dumps({"reservations": json_reservations})
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
