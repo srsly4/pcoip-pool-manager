@@ -38,11 +38,15 @@ class LoginView extends React.Component {
         })
             .then((res) => {
                 if (res.status === 404) {
-                    alert('Incorrect username or password!');
+                    alert('Username or password incorrect');
+                }
+                if (res.status !== 200) {
+                    alert('Error ' + res.status);
                     return;
                 }
-                this.props.didLogin('not-a-token'); // fixme: use token when delivered by server
+                return res.text();
             })
+            .then(token => this.props.didLogin((token || "").replace(/"/g, '')))
             .catch(alert);
 
     }
