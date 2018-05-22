@@ -4,7 +4,7 @@ import {connect} from 'react-redux';
 // Import React Table
 import ReactTable from "react-table";
 import "react-table/react-table.css";
-import App from '../Modal'
+import Modal from '../Modal'
 import fetch from "isomorphic-fetch";
 import matchSorter from 'match-sorter'
 
@@ -37,6 +37,7 @@ class PoolsView extends React.Component {
         const {data} = this.state;
         return (
             <div>
+              <h1>Pools</h1>
                 <ReactTable
                     data={data}
                     filterable
@@ -68,8 +69,7 @@ class PoolsView extends React.Component {
                         {
                             Header: 'reservation',
                             id: 'click-me-button',
-                            accessor: d=><App name={d.displayName} info={d.description} poolId={d.pool_id}/>
-
+                            accessor: d=><Modal name={d.displayName} info={d.description}/>
                         },
 
 
