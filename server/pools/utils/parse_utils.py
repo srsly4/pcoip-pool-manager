@@ -17,4 +17,4 @@ def process_reservation_row(row):
             'end_date': datetime.datetime.strptime(row[4], "%h-%m").time(),
             'start_time': datetime.datetime.strptime(row[3], "%h-%m").time(),
             'slot_count': int(row[5]),
-            'peroid': int(row[6])}
+            'period': int(row[6])}
