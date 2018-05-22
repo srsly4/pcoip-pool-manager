@@ -44,8 +44,9 @@ class LoginView extends React.Component {
                     alert('Error ' + res.status);
                     return;
                 }
-                this.props.didLogin(res.text());
+                return res.text();
             })
+            .then(token => this.props.didLogin((token || "").replace(/"/g, '')))
             .catch(alert);
 
     }

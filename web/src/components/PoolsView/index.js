@@ -18,11 +18,18 @@ class PoolsView extends React.Component {
     }
 
     componentDidMount() {
-        fetch(`${this.props.apiUrl}/pools/`)
-            .then(resp => resp.json())
-            .then(resp => {
-                this.setState({data: resp['pools']});
-            })
+        fetch(`${this.props.apiUrl}/pools/`, {
+            headers: {
+                'Authorization': `Token ${this.props.token}`
+            }
+        })
+        .then(resp => resp.json())
+        .then(resp => {
+            this.setState({data: resp});
+        })
+        .catch((err) => {
+            console.log(`Error while getting pools: ${err}`)
+        });
     }
 
     render() {
@@ -75,6 +82,7 @@ class PoolsView extends React.Component {
 }
 
 const mapStateToProps = (state) => ({
+    token: state.user.token,
     apiUrl: state.user.apiUrl,
 });
 

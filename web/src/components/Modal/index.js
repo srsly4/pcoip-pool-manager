@@ -40,7 +40,7 @@ export default class App extends React.Component {
     render() {
         return (
             <div>
-                <button onClick={this.openModal}>Rezerwuj</button>
+                <button className="button small primary" onClick={this.openModal}>Rezerwuj</button>
                 <Modal
                     isOpen={this.state.modalIsOpen}
                     onAfterOpen={this.afterOpenModal}
