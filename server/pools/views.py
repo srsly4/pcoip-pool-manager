@@ -1,19 +1,18 @@
 import csv
 import io
-import json
 from datetime import timedelta, datetime
 
 from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
+from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny
 from rest_framework.renderers import JSONRenderer
-from .models import Pool, Reservation, ExpirableToken
-from rest_framework.parsers import JSONParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
+
 from .models import Pool
-from pools.utils import parse_utils
+from .models import Reservation, ExpirableToken
+from .utils import parse_utils
 
 
 class Authentication(APIView):
@@ -24,9 +23,10 @@ class Authentication(APIView):
 
     def post(self, request):
         """
-        :param request: HTTPRequest, body made of JSON containing fields "username" and "password"
-        :return: 200 if user exists, message body contains string token needed for further operations
-        :raise: 404 if login fails due to unrecognized username or password
+        :param: JSON body containing fields "username" and "password" \n
+        :return: 200 if user exists, message body contains string token needed for further operations \n
+        :raise: 404 if login fails due to unrecognized username or password \n
+        :raise: 400 if login fails due to incorrect request body \n
         """
         try:
             json_body = request.data
@@ -46,13 +46,16 @@ class SingleReservation(APIView):
     """
     View responsible for adding a single reservation to database
     """
-    parser_classes = (JSONParser, )
+    parser_classes = (JSONParser,)
 
     def post(self, request):
         """
-        :param request: HTTPRequest, body made of JSON containing pool_id, slot_count, start_datetime and end_datetime
-        :return: 201 if reservation is added to database
-        :raise: 409 if reservation can't be added to database
+        :param: JSON body containing pool_id, slot_count, start_datetime and end_datetime \n
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :return: 201 if reservation is added to database \n
+        :raise: 409 if reservation can't be added to database \n
+        :raise: 401 if token authentication fails \n
         """
         try:
             body = request.data
@@ -70,14 +73,18 @@ class SingleReservation(APIView):
 
     def delete(self, request):
         """
-        :param request: HTTPRequest, JSON body with 'id' of reservation to delete
-        :return: 204 if reservation is deleted
-        :raise: 404 if reservation doesn't exist
+        :param: JSON body with 'id' of reservation to delete \n
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :return: 204 if reservation is deleted \n
+        :raise: 404 if reservation doesn't exist \n
+        :raise: 401 if token authentication fails \n
         """
         body = request.data
         canceled = Reservation.objects.filter(id=body['id']).delete()
         status = HTTP_204_NO_CONTENT if canceled[0] else HTTP_404_NOT_FOUND
         return Response(status=status)
+
 
 class Reservations(APIView):
     """
@@ -87,11 +94,13 @@ class Reservations(APIView):
 
     def get(self, request):
         """
-        :param request: HTTPRequest used only to authenticate user
-        :parameter start: start of time interval in which reservations are searched, not required
-        :parameter end: end of time interval in which reservations are searched, not required
-        :parameter pid: id of pool to search, not required
-        :return: 200, contains json with all reservations
+        :parameter start: start of time interval in which reservations are searched, not required \n
+        :parameter end: end of time interval in which reservations are searched, not required \n
+        :parameter pid: id of pool to search, not required \n
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :return: 200, contains json with all reservations \n
+        :raise: 401 if token authentication fails \n
         """
         filters = {}
         start_datetime = request.GET.get('start')
@@ -112,13 +121,19 @@ class Reservations(APIView):
 
     def post(self, request):
         """
-        :param request: HTTPRequest containing file(named 'reservations') with reservations list
-        :return: 201 if reservations has been added to database
+        :param: File(named 'reservations') with reservations list \n
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :return: 201 if reservations has been added to database \n
         :raise: 409 if there is a conflict with different reservations,
-                response text contains list of impossible reservations
-        :raise: 400 if file format isn't correct
+                response text contains list of impossible reservations \n
+        :raise: 400 if data provided isn't correct \n
+        :raise: 401 if token authentication fails \n
         """
-        file = request.data['reservations']
+        try:
+            file = request.data['reservations']
+        except KeyError:
+            return Response("Incorrect body", status=HTTP_400_BAD_REQUEST)
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)
@@ -148,7 +163,7 @@ class Reservations(APIView):
 
                     if res['peroid'] <= 0:
                         break
-                    start += timedelta(days=res['peroid'])
+                    start += timedelta(days=res['period'])
         except Exception:
             return Response("Incorrect reservation description", status=HTTP_400_BAD_REQUEST)
         if len(not_possible) > 0:
@@ -166,12 +181,14 @@ class PoolsList(APIView):
     View responsible for updating pools list and getting list of pools
     """
     parser_classes = (MultiPartParser,)
-    renderer_classes = (JSONRenderer, )
+    renderer_classes = (JSONRenderer,)
 
     def get(self, request):
         """
-        :param request: used only for authentication
-        :return: 200 with a JSON containing all pools
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :return: 200 with a JSON containing all pools \n
+        :raise: 401 if token authentication fails \n
         """
         pools = list(Pool.objects.values())
         for p in pools:
@@ -180,9 +197,12 @@ class PoolsList(APIView):
 
     def post(self, request):
         """
-        :param request: HTTPRequest containing file(named 'pools') with pools description
-        :return: 201 if pools has been added to database
-        :raise: 400 if file format isn't correct
+        :param: File(named 'pools') with pools description \n
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :return: 201 if pools has been added to database \n
+        :raise: 400 if file format isn't correct \n
+        :raise: 401 if token authentication fails \n
         """
         file = request.data['pools']
         content = io.StringIO(file.file.read().decode('utf-8'))
