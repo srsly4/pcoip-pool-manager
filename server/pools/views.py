@@ -65,6 +65,16 @@ class SingleReservation(APIView):
         else:
             return Response("Can't add reservation", HTTP_409_CONFLICT)
 
+    def delete(self, request):
+        """
+        :param request: HTTPRequest, JSON body with 'id' of reservation to delete
+        :return: 204 if reservation is deleted
+        :raise: 404 if reservation doesn't exist
+        """
+        body = request.data
+        canceled = Reservation.objects.filter(id=body['id']).delete()
+        status = HTTP_204_NO_CONTENT if canceled[0] else HTTP_404_NOT_FOUND
+        return Response(status=status)
 
 class Reservations(APIView):
     """
