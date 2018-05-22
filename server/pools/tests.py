@@ -120,7 +120,7 @@ class PoolsTest(TestCase):
 class SingleReservationTest(TestCase):
     def setUp(self):
         self.pool = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
-                                         enabled=True, description="desc1")
+                                        enabled=True, description="desc1")
         self.pool.save()
 
         self.user = User.objects.create_user(username="user", password="testtesttest", email="testmail@mail.mail")
@@ -131,7 +131,7 @@ class SingleReservationTest(TestCase):
         self.factory = APIRequestFactory()
         self.view = SingleReservation.as_view()
 
-    def test_success(self):
+    def test_get_success(self):
         data = {"pool_id": "id1", "slot_count": 2, "start_datetime": "2018-05-20 12:00",
                 "end_datetime": "2018-05-20 14:00"}
         request = self.factory.post("/pools/", data=data, format='json')
@@ -141,7 +141,7 @@ class SingleReservationTest(TestCase):
         res = Reservation.objects.filter(pool=self.pool)
         self.assertEqual(len(res), 1)
 
-    def test_fail(self):
+    def test_get_fail(self):
         data = {"pool_id": "id1", "slot_count": 50, "start_datetime": "2018-05-20 12:00",
                 "end_datetime": "2018-05-20 14:00"}
         request = self.factory.post("/pools/", data=data, format='json')
@@ -151,8 +151,15 @@ class SingleReservationTest(TestCase):
         res = Reservation.objects.filter(pool=self.pool)
         self.assertEqual(len(res), 0)
 
+    def test_get_wrong_format(self):
+        data = {"pool_id": "id1", "slot_count": "abc"}
+        request = self.factory.post("/pools/", data=data, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, data.status_code)
 
-class ReservationsTestGet(TestCase):
+
+class ReservationsGetTest(TestCase):
     def setUp(self):
         self.pool1 = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
                                         enabled=True, description="desc1")
@@ -174,7 +181,7 @@ class ReservationsTestGet(TestCase):
                                                start_datetime=datetime(2018, 4, 1, 11, 15),
                                                end_datetime=datetime(2018, 4, 1, 12, 45))
         self.res1.save()
-        self.res2 = Reservation.objects.create(pool=self.pool1, user=self.user1, slot_count=5,
+        self.res2 = Reservation.objects.create(pool=self.pool2, user=self.user1, slot_count=2,
                                                start_datetime=datetime(2018, 4, 1, 13, 15),
                                                end_datetime=datetime(2018, 4, 1, 15, 45))
         self.res2.save()
@@ -182,11 +189,137 @@ class ReservationsTestGet(TestCase):
                                                start_datetime=datetime(2018, 4, 1, 13, 15),
                                                end_datetime=datetime(2018, 4, 1, 15, 45))
         self.res3.save()
+        self.res4 = Reservation.objects.create(pool=self.pool2, user=self.user1, slot_count=1,
+                                               start_datetime=datetime(2018, 4, 1, 16, 00),
+                                               end_datetime=datetime(2018, 4, 1, 16, 30))
+        self.res4.save()
+
         self.factory = APIRequestFactory()
         self.view = Reservations.as_view()
 
-    def test_1(self):
+    def test_no_param(self):
         request = self.factory.get("/pools/")
         force_authenticate(request=request, user=self.user1, token=self.key1)
         data = self.view(request).render()
         self.assertEquals(status.HTTP_200_OK, data.status_code)
+        res = json.loads(data.content.decode())["reservations"]
+        self.assertEqual(len(res), 3)
+        self.assertTrue(res[0]["pool_id"] == "id1" and res[0]["slot_count"] == 5
+                        and res[0]["start_datetime"] == "2018-04-01 11:15:00"
+                        and res[0]["end_datetime"] == "2018-04-01 12:45:00")
+        self.assertTrue(res[1]["pool_id"] == "id2" and res[1]["slot_count"] == 2
+                        and res[1]["start_datetime"] == "2018-04-01 13:15:00"
+                        and res[1]["end_datetime"] == "2018-04-01 15:45:00")
+        self.assertTrue(res[2]["pool_id"] == "id2" and res[2]["slot_count"] == 1
+                        and res[2]["start_datetime"] == "2018-04-01 16:00:00"
+                        and res[2]["end_datetime"] == "2018-04-01 16:30:00")
+
+    def test_param_start(self):
+        request = self.factory.get("/pools/?start=2018-04-01 12:30:00")
+        force_authenticate(request=request, user=self.user1, token=self.key1)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_200_OK, data.status_code)
+        res = json.loads(data.content.decode())["reservations"]
+        self.assertEqual(len(res), 2)
+        self.assertTrue(res[0]["pool_id"] == "id2" and res[0]["slot_count"] == 2
+                        and res[0]["start_datetime"] == "2018-04-01 13:15:00"
+                        and res[0]["end_datetime"] == "2018-04-01 15:45:00")
+        self.assertTrue(res[1]["pool_id"] == "id2" and res[1]["slot_count"] == 1
+                        and res[1]["start_datetime"] == "2018-04-01 16:00:00"
+                        and res[1]["end_datetime"] == "2018-04-01 16:30:00")
+
+    def test_param_end(self):
+        request = self.factory.get("/pools/?end=2018-04-01 12:50:00")
+        force_authenticate(request=request, user=self.user1, token=self.key1)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_200_OK, data.status_code)
+        res = json.loads(data.content.decode())["reservations"]
+        self.assertEqual(len(res), 1)
+        self.assertTrue(res[0]["pool_id"] == "id1" and res[0]["slot_count"] == 5
+                        and res[0]["start_datetime"] == "2018-04-01 11:15:00"
+                        and res[0]["end_datetime"] == "2018-04-01 12:45:00")
+
+    def test_param_start_end(self):
+        request = self.factory.get("/pools/?start=2018-04-01 12:30:00&end=2018-04-01 15:50:00")
+        force_authenticate(request=request, user=self.user1, token=self.key1)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_200_OK, data.status_code)
+        res = json.loads(data.content.decode())["reservations"]
+        self.assertEqual(len(res), 1)
+        self.assertTrue(res[0]["pool_id"] == "id2" and res[0]["slot_count"] == 2
+                        and res[0]["start_datetime"] == "2018-04-01 13:15:00"
+                        and res[0]["end_datetime"] == "2018-04-01 15:45:00")
+
+    def test_param_id(self):
+        request = self.factory.get("/pools/?pid=id2")
+        force_authenticate(request=request, user=self.user1, token=self.key1)
+        data = self.view(request).render()
+        self.assertEquals(status.HTTP_200_OK, data.status_code)
+        res = json.loads(data.content.decode())["reservations"]
+        self.assertEqual(len(res), 2)
+        self.assertTrue(res[0]["pool_id"] == "id2" and res[0]["slot_count"] == 2
+                        and res[0]["start_datetime"] == "2018-04-01 13:15:00"
+                        and res[0]["end_datetime"] == "2018-04-01 15:45:00")
+        self.assertTrue(res[1]["pool_id"] == "id2" and res[1]["slot_count"] == 1
+                        and res[1]["start_datetime"] == "2018-04-01 16:00:00"
+                        and res[1]["end_datetime"] == "2018-04-01 16:30:00")
+
+
+class ReservationPostTest(TestCase):
+    def setUp(self):
+        self.pool = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
+                                        enabled=True, description="desc1")
+        self.pool.save()
+        self.user = User.objects.create_user(username="user1", password="testtesttest1", email="testmail1@mail.mail")
+        self.user.save()
+        token = ExpirableToken.objects.create(user=self.user, key=123123123123)
+        token.save()
+        self.key = token.key
+        self.factory = APIRequestFactory()
+        self.view = Reservations.as_view()
+
+    def test_post_correct(self):
+        file_text = '''"pool_id","start_date","end_date","start_time","end_time","slot_count","peroid"
+"id1","2018-04-01","2018-04-01","12:00:00","14:15:00",2,0
+"id1","2018-04-01","2018-04-01","13:00:00","17:00:00",3,0
+'''
+        file = SimpleUploadedFile('reservations.csv', file_text.encode())
+        request = self.factory.post("/reservations/", data={'reservations': file}, format='multipart')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEqual(status.HTTP_201_CREATED, data.status_code)
+        res = list(Reservation.objects.filter(pool=self.pool))
+        self.assertEqual(len(res), 2)
+        self.assertTrue(res[0].pool == self.pool and res[0].start_datetime == datetime(2018, 4, 1, 12, 00)
+                        and res[0].end_datetime == datetime(2018, 4, 1, 14, 15) and res[0].slot_count == 2)
+        self.assertTrue(res[1].pool == self.pool and res[1].start_datetime == datetime(2018, 4, 1, 13, 00)
+                        and res[1].end_datetime == datetime(2018, 4, 1, 17, 00) and res[0].slot_count == 2)
+
+    def test_post_incorrect(self):
+        file_text = '''"pool_id","start_date","end_date","start_time","end_time","slot_count","peroid"
+"id1","2018-04-01","2018-04-01","14:15:00",2,0
+"id1","2018-04-01","2018-04-01","13:00:00",32:11,3,-2
+'''
+        file = SimpleUploadedFile('reservations.csv', file_text.encode())
+        request = self.factory.post("/reservations/", data={'reservations': file}, format='multipart')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEqual(status.HTTP_400_BAD_REQUEST, data.status_code)
+        res = list(Reservation.objects.filter(pool=self.pool))
+        self.assertEqual(len(res), 0)
+
+    def test_post_peroid(self):
+        file_text = '''"pool_id","start_date","end_date","start_time","end_time","slot_count","peroid"
+"id1","2018-04-01","2018-04-07","14:10:00","15:00:00",2,1
+'''
+        file = SimpleUploadedFile('reservations.csv', file_text.encode())
+        request = self.factory.post("/reservations/", data={'reservations': file}, format='multipart')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEqual(status.HTTP_201_CREATED, data.status_code)
+        res = list(Reservation.objects.filter(pool=self.pool))
+        self.assertEqual(len(res), 7)
+        for i in range(len(res)):
+            self.assertTrue(res[i].pool == self.pool and res[i].start_datetime == datetime(2018, 4, i + 1, 14, 10)
+                            and res[i].end_datetime == datetime(2018, 4, i + 1, 15, 00)
+                            and res[i].slot_count == 2)
