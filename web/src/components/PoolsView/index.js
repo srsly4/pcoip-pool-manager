@@ -25,7 +25,6 @@ class PoolsView extends React.Component {
         })
         .then(resp => resp.json())
         .then(resp => {
-            console.log(resp);
             this.setState({data: resp});
         })
         .catch((err) => {
@@ -69,7 +68,8 @@ class PoolsView extends React.Component {
                         {
                             Header: 'reservation',
                             id: 'click-me-button',
-                            accessor: d=><Modal name={d.displayName} info={d.description} poolId={d.pool_id}/>
+                            accessor: d=><Modal onSucessAdd={() => { this.componentDidMount(); }}
+                                                name={d.displayName} info={d.description} poolId={d.pool_id}/>
                         },
 
 

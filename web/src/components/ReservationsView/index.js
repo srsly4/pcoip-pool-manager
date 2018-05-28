@@ -102,7 +102,6 @@ class ReservationsView extends React.Component {
             <tr>
               <th>Pool</th>
               <th>Slots</th>
-              <th>User</th>
               <th>Date and time</th>
               <th>Actions</th>
             </tr>
@@ -110,10 +109,9 @@ class ReservationsView extends React.Component {
             <tbody>
             { this.state.reservations.map((reservation) => {
               return (<tr>
-                <td>{(reservation.pool || {}).displayName}</td>
-                <td>{reservation.slots}</td>
-                <td></td>
-                <td></td>
+                <td>{(reservation.pool_id || 'unknown')}</td>
+                <td>{reservation.slot_count}</td>
+                <td>{reservation.start_datetime} - {reservation.end_datetime}</td>
                 <td><button className="button danger small">Remove</button></td>
               </tr>)
             }) }
