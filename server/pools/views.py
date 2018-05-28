@@ -131,10 +131,10 @@ class Reservations(APIView):
         :raise: 400 if data provided isn't correct \n
         :raise: 401 if token authentication fails \n
         """
-        print("!!!!!!!")
-        print(request.data.keys())
-        file = request.data['reservations']
-
+        try:
+            file = request.data['reservations']
+        except KeyError:
+            return Response("No file included", status=HTTP_400_BAD_REQUEST)
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)
@@ -142,7 +142,6 @@ class Reservations(APIView):
             reservations = [parse_utils.process_reservation_row(row) for row in reader]
         except (KeyError, ValueError):
             return Response("Wrong file format", status=HTTP_400_BAD_REQUEST)
-
         to_add = []
         not_possible = []
         user = request.user
@@ -162,9 +161,9 @@ class Reservations(APIView):
                     else:
                         not_possible.append(('pool_id', start_time, end_time))
 
-                    if res['peroid'] <= 0:
+                    if res['period'] <= 0:
                         break
-                    start += timedelta(days=res['peroid'])
+                    start += timedelta(days=res['period'])
         except Exception:
             return Response("Incorrect reservation description", status=HTTP_400_BAD_REQUEST)
         if len(not_possible) > 0:
