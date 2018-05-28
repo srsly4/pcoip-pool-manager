@@ -66,7 +66,7 @@ class PoolsView extends React.Component {
 
                         },
                         {
-                            Header: 'reservation',
+                            Header: 'Actions',
                             id: 'click-me-button',
                             accessor: d=><Modal onSucessAdd={() => { this.componentDidMount(); }}
                                                 name={d.displayName} info={d.description} poolId={d.pool_id}/>

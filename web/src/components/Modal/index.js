@@ -112,7 +112,7 @@ class App extends React.Component {
   render() {
     return (
       <div>
-        <button className="button small primary" onClick={ this.openModal }>Rezerwuj</button>
+        <button className="button small primary" onClick={ this.openModal }>Reserve</button>
         <Modal
           isOpen={ this.state.modalIsOpen }
           onAfterOpen={ this.afterOpenModal }
