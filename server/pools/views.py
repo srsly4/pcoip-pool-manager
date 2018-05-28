@@ -3,7 +3,7 @@ import io
 from datetime import timedelta, datetime
 
 from django.contrib.auth import authenticate
-from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -91,7 +91,7 @@ class Reservations(APIView):
     """
     View responsible for adding new reservations and getting list of all reservations
     """
-    parser_classes = (JSONParser, MultiPartParser,)
+    parser_classes = (JSONParser, FormParser, MultiPartParser,)
 
     def get(self, request):
         """
@@ -131,7 +131,10 @@ class Reservations(APIView):
         :raise: 400 if data provided isn't correct \n
         :raise: 401 if token authentication fails \n
         """
+        print("!!!!!!!")
+        print(request.data.keys())
         file = request.data['reservations']
+
         content = io.StringIO(file.file.read().decode('utf-8'))
         reader = csv.reader(content, delimiter=',')
         next(reader)

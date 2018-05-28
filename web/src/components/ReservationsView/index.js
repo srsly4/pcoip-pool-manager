@@ -24,7 +24,7 @@ class ReservationsView extends React.Component {
     })
       .then(resp => resp.json())
       .then(json => {
-        this.setState({reservations: json});
+        this.setState({reservations: json.reservations || []});
       })
       .catch((err) => {
         console.log(`Error while getting pools: ${err}`)
@@ -39,7 +39,7 @@ class ReservationsView extends React.Component {
     }
 
     const formData = new FormData();
-    formData.append('reservations', this.state.selectedFile, this.state.selectedFile.name);
+    formData.append('reservations', this.state.selectedFile, 'reservations');
     const headers = {
       'Accept': 'application/json, */*',
       'Content-Type': 'multipart/form-data',
@@ -86,6 +86,7 @@ class ReservationsView extends React.Component {
   }
 
   render() {
+    console.log(this.state.reservations);
     return (
       <MainView>
         <h1>Reservations</h1>
