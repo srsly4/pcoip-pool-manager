@@ -131,8 +131,6 @@ class Reservations(APIView):
         :raise: 400 if data provided isn't correct \n
         :raise: 401 if token authentication fails \n
         """
-        print("!!!!!!!")
-        print(request.data.keys())
         file = request.data['reservations']
 
         content = io.StringIO(file.file.read().decode('utf-8'))

@@ -42,7 +42,6 @@ class ReservationsView extends React.Component {
     formData.append('reservations', this.state.selectedFile, 'reservations');
     const headers = {
       'Accept': 'application/json, */*',
-      'Content-Type': 'multipart/form-data',
       'Authorization': `Token ${this.props.token}`
     };
     const init = {
