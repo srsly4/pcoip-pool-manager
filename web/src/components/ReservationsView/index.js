@@ -1,8 +1,12 @@
 import React from 'react';
 import {connect} from 'react-redux';
 import Modal from 'react-modal';
+import moment from 'moment';
 import fetch from 'isomorphic-fetch';
+import ReactTable from "react-table";
+import "react-table/react-table.css";
 import MainView from '../MainView';
+import matchSorter from 'match-sorter';
 
 class ReservationsView extends React.Component {
 
@@ -17,7 +21,7 @@ class ReservationsView extends React.Component {
   }
 
   componentDidMount() {
-    fetch(`${this.props.apiUrl}/reservations/`, {
+    fetch(`${this.props.apiUrl}/reservations?start=${moment().format('YYYY-MM-DD HH:mm:ss')}`, {
       headers: {
         'Authorization': `Token ${this.props.token}`
       }
@@ -27,7 +31,7 @@ class ReservationsView extends React.Component {
         this.setState({reservations: json.reservations || []});
       })
       .catch((err) => {
-        console.log(`Error while getting pools: ${err}`)
+        alert(`Error while getting pools: ${err}`)
       });
   }
 
@@ -42,7 +46,6 @@ class ReservationsView extends React.Component {
     formData.append('reservations', this.state.selectedFile, 'reservations');
     const headers = {
       'Accept': 'application/json, */*',
-      'Content-Type': 'multipart/form-data',
       'Authorization': `Token ${this.props.token}`
     };
     const init = {
@@ -50,7 +53,7 @@ class ReservationsView extends React.Component {
       method: 'POST',
       body: formData
     };
-    fetch(`${this.props.apiUrl}/reservations/`, init)
+    fetch(`${this.props.apiUrl}/reservations`, init)
       .then(res => res.text())
       .then(text => alert(text))
       .catch(err => console.error(`An error has occured: ${err}`));
@@ -86,7 +89,6 @@ class ReservationsView extends React.Component {
   }
 
   render() {
-    console.log(this.state.reservations);
     return (
       <MainView>
         <h1>Reservations</h1>
@@ -98,28 +100,45 @@ class ReservationsView extends React.Component {
           {this.renderAddMultipleReservationsModal()}
         </div>
         <div>
-          <table>
-            <thead>
-            <tr>
-              <th>Pool</th>
-              <th>Slots</th>
-              <th>User</th>
-              <th>Date and time</th>
-              <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            { this.state.reservations.map((reservation) => {
-              return (<tr>
-                <td>{(reservation.pool || {}).displayName}</td>
-                <td>{reservation.slots}</td>
-                <td></td>
-                <td></td>
-                <td><button className="button danger small">Remove</button></td>
-              </tr>)
-            }) }
-            </tbody>
-          </table>
+          <ReactTable
+            data={this.state.reservations}
+            filterable
+            defaultFilterMethod={(filter, row) =>
+              String(row[filter.id]) === filter.value}
+            columns={[
+
+              {
+                Header: "Pool id",
+                id:'pool_id',
+                accessor: d=>d.pool_id,
+                filterMethod: (filter, rows) =>
+                  matchSorter(rows, filter.value, { keys: ["pool_id"] }),
+                filterAll: true
+              },
+              {
+                Header: "Slots",
+                accessor: 'slot_count',
+              },
+              {
+                Header: "Start time",
+                id: "start_datetime",
+                accessor: d => d.start_datetime,
+                filterMethod: (filter, rows) =>
+                  matchSorter(rows, filter.value, { keys: ["start_datetime"] }),
+                filterAll: true
+              },
+              {
+                Header: "End time",
+                id: "end_datetime",
+                accessor: d => d.end_datetime,
+                filterMethod: (filter, rows) =>
+                  matchSorter(rows, filter.value, { keys: ["end_datetime"] }),
+                filterAll: true
+              },
+            ]}
+            defaultPageSize={15}
+            className="-striped -highlight"
+          />
         </div>
       </MainView>
     );
