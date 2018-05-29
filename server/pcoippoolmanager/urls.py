@@ -20,5 +20,6 @@ from rest_framework.documentation import include_docs_urls
 urlpatterns = [
     path('', include('pools.urls')),
     path('admin/', admin.site.urls),
-    path('docs/', include_docs_urls(title='PCOIP API Docs', public=True)),
+    path('docs/',
+         include_docs_urls(title='PCOIP API Docs', public=True, permission_classes=[], authentication_classes=[])),
 ]
