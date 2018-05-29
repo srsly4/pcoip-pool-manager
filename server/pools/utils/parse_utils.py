@@ -18,7 +18,7 @@ def process_reservation_row(row):
             'start_time': datetime.datetime.strptime(row[3], "%H:%M:%S").time(),
             'end_time': datetime.datetime.strptime(row[4], "%H:%M:%S").time(),
             'slot_count': int(row[5]),
-            'peroid': int(row[6])}
+            'period': int(row[6])}
 
 
 def make_JSON(reservation):
