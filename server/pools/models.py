@@ -63,6 +63,7 @@ class Reservation(models.Model):
     slot_count = models.PositiveSmallIntegerField(default=0)
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
+    is_canceled = models.BooleanField(default=False)
 
 
 class ExpirableToken(Token):

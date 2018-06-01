@@ -2,6 +2,7 @@ import csv
 import io
 from datetime import timedelta, datetime
 
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
@@ -82,8 +83,13 @@ class SingleReservation(APIView):
         :raise: 401 if token authentication fails \n
         """
         body = request.data
-        canceled = Reservation.objects.filter(id=body['id']).delete()
-        status = HTTP_204_NO_CONTENT if canceled[0] else HTTP_404_NOT_FOUND
+        try:
+            to_cancel = Reservation.objects.get(id=body['id'])
+            to_cancel.is_canceled = True
+            to_cancel.save()
+            status = HTTP_204_NO_CONTENT
+        except ObjectDoesNotExist:
+            status = HTTP_404_NOT_FOUND
         return Response(status=status)
 
 
