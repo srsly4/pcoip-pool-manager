@@ -109,7 +109,7 @@ class Reservations(APIView):
         :return: 200, contains json with all reservations \n
         :raise: 401 if token authentication fails \n
         """
-        filters = {}
+        filters = {'is_canceled': False}
         start_datetime = request.GET.get('start')
         if start_datetime is not None:
             filters["start_datetime__gte"] = start_datetime

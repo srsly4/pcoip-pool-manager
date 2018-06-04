@@ -109,6 +109,11 @@ class TestMultipleReservedSlot(TestCase):
                                                end_datetime=datetime(2018, 4, 1, 18, 00))
         self.res5.save()
 
+        canceled = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user1.id, slot_count=20,
+                                              start_datetime=datetime(2018, 4, 1, 17, 00),
+                                              end_datetime=datetime(2018, 4, 1, 18, 00), is_canceled=True)
+        canceled.save()
+
     def test_overlapping_reservations(self):
         self.assertEqual(
             self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 30), datetime(2018, 4, 1, 13, 00)),
@@ -351,6 +356,11 @@ class ReservationsGetTest(TestCase):
                                                start_datetime=datetime(2018, 4, 1, 16, 00),
                                                end_datetime=datetime(2018, 4, 1, 16, 30))
         self.res4.save()
+
+        canceled = Reservation.objects.create(pool=self.pool2, user=self.user1, slot_count=1,
+                                              start_datetime=datetime(2018, 4, 1, 16, 00),
+                                              end_datetime=datetime(2018, 4, 1, 16, 30), is_canceled=True)
+        canceled.save()
 
         self.factory = APIRequestFactory()
         self.view = Reservations.as_view()
