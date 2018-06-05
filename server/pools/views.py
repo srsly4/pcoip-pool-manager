@@ -201,8 +201,6 @@ class PoolsList(APIView):
         :raise: 401 if token authentication fails \n
         """
         pools = list(Pool.objects.values())
-        for p in pools:
-            del p['id']
         return Response(pools, content_type="application/json")
 
     def post(self, request):
