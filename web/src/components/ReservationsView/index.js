@@ -137,7 +137,7 @@ class ReservationsView extends React.Component {
               },
             ]}
             defaultPageSize={15}
-            className="-striped -highlight"
+            className="-striped -highlight text-align: center"
           />
         </div>
       </MainView>

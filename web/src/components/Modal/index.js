@@ -128,7 +128,7 @@ class App extends React.Component {
           </div>
           <div>
             <label>Slot count:</label>
-            <input type="text" id="poolCount" value={ this.state.poolCount } placeholder={ 'max' }
+            <input type="text" id="poolCount" value={ this.state.poolCount } placeholder={ 'max: '+this.props.maxCount}
                    onChange={ event => this.onChangeProperty('poolCount', event.target.value) }
             />
             <label>Reservation start time:</label>
