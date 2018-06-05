@@ -62,7 +62,11 @@ class SingleReservation(APIView):
         try:
             body = request.data
             pool = Pool.objects.get(pool_id=body['pool_id'])
-            if pool.can_place_reservation(body['slot_count'], body['start_datetime'], body['end_datetime']):
+            format_data_time = '%Y-%m-%d %H:%M:%S'
+            start = datetime.strptime(body['start_datetime'], format_data_time)
+            end = datetime.strptime(body['end_datetime'], format_data_time)
+
+            if pool.can_place_reservation(body['slot_count'], start, end):
                 reservation = Reservation(pool=pool, user=request.user, slot_count=body['slot_count'],
                                           start_datetime=body['start_datetime'],
                                           end_datetime=body['end_datetime'])
