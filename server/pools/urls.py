@@ -7,5 +7,6 @@ urlpatterns = [
     path('reservation/', views.SingleReservation.as_view()),
     path('auth/', views.Authentication.as_view()),
     path('pools/', views.PoolsList.as_view()),
+    path('mail/', views.MailView.as_view())
 ]
 
