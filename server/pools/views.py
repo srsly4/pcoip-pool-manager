@@ -239,6 +239,13 @@ class MailView(APIView):
     parser_classes = (JSONParser,)
 
     def post(self, request):
+        """
+        :param: JSON containing field 'content', and optional field 'reply_email'\n
+        :return: 200 if message has been sent\n
+        :raise: 401 if token authentication fails \n
+        :raise: 400 if no content has been specified\n
+        :raise: 500 if message could not be sent
+        """
         try:
             content = request.data['content']
         except KeyError:
