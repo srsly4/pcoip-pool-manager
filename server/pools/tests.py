@@ -8,7 +8,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIRequestFactory, force_authenticate
 from .models import Pool, Reservation, ExpirableToken
-from .views import PoolsList, SingleReservation, Reservations, MailView
+from .views import PoolsList, SingleReservation, Reservations, MailView, Statistics
 
 
 # Create your tests here.
@@ -548,7 +548,7 @@ class StatisticsTest(TestCase):
         self.assertEqual(response.data['start'], start_string)
         self.assertEqual(response.data['end'], end_string)
 
-    def test_perion_not_given(self):
+    def test_period_not_given(self):
         request = self.factory.get("/stats/")
         force_authenticate(request=request, user=self.user, token=self.key)
         response = self.view(request).render()
@@ -567,6 +567,7 @@ class StatisticsTest(TestCase):
         force_authenticate(request=request, user=self.user, token=self.key)
         response = self.view(request).render()
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
 
 class MailTest(TestCase):
     def setUp(self):
