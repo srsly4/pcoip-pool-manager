@@ -93,7 +93,7 @@ class App extends React.Component {
     })
       .then((res) => {
         if (res.status === 409) {
-          alert('Can\'t add reservation');
+          alert('Could not add reservation');
           return;
         }
         if (res.status !== 201) {
@@ -128,7 +128,7 @@ class App extends React.Component {
           </div>
           <div>
             <label>Slot count:</label>
-            <input type="text" id="poolCount" value={ this.state.poolCount } placeholder={ 'max' }
+            <input type="text" id="poolCount" value={ this.state.poolCount } placeholder={ 'max: '+this.props.maxCount}
                    onChange={ event => this.onChangeProperty('poolCount', event.target.value) }
             />
             <label>Reservation start time:</label>
