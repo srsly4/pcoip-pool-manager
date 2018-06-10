@@ -1,7 +1,10 @@
 import React from 'react';
 import {connect} from 'react-redux';
+import moment from 'moment';
 import "react-table/react-table.css";
 import MainView from '../MainView';
+import fetch from 'isomorphic-fetch';
+import actions from '../../actions';
 
 class StatisticsView extends React.Component {
 
@@ -9,6 +12,7 @@ class StatisticsView extends React.Component {
     super(props);
 
     this.state = {
+      daysShowed: 30,
       statistics: {
         topReservations: [
           { pool_id: 's7n-girls', total_slots: 17 },
@@ -29,18 +33,29 @@ class StatisticsView extends React.Component {
   }
 
   componentDidMount() {
-    // fetch(`${this.props.apiUrl}/reservations}`, {
-    //   headers: {
-    //     'Authorization': `Token ${this.props.token}`
-    //   }
-    // })
-    //   .then(resp => resp.json())
-    //   .then(json => {
-    //     this.setState({reservations: json.reservations || []});
-    //   })
-    //   .catch((err) => {
-    //     alert(`Error while getting pools: ${err}`)
-    //   });
+    this.refreshData();
+  }
+
+  refreshData() {
+    fetch(`${this.props.apiUrl}/stats?startDate=${moment().subtract(this.state.daysShowed, 'days').format('YYYY-MM-DD-HH-mm')}`, {
+      headers: {
+        'Authorization': `Token ${this.props.token}`
+      }
+    })
+      .then(resp => {
+        if (resp.status === 401) {
+          alert('Unauthenticated');
+          this.props.didLogout();
+        }
+        return resp.json();
+      })
+      .then(resp => {
+        console.log(resp);
+        this.setState({statistics: resp || {}});
+      })
+      .catch((err) => {
+        console.log(`Error while getting statistics: ${err}`)
+      });
   }
 
   render() {
@@ -60,10 +75,10 @@ class StatisticsView extends React.Component {
                 </thead>
                 <tbody>
                 {
-                  this.state.statistics.topReservations.map((item, index) => {
+                  (this.state.statistics.most_used || []).map((item, index) => {
                     return (<tr key={index}>
-                      <td>{item.pool_id || 'unknown'}</td>
-                      <td>{item.total_slots || 0}</td>
+                      <td>{item[0] || 'unknown'}</td>
+                      <td>{item[1] || 0}</td>
                     </tr>)
                   })
                 }
@@ -83,10 +98,10 @@ class StatisticsView extends React.Component {
                 </thead>
                 <tbody>
                 {
-                  this.state.statistics.leastReservations.map((item, index) => {
+                  (this.state.statistics.least_used || []).map((item, index) => {
                     return (<tr key={index}>
-                      <td>{item.pool_id || 'unknown'}</td>
-                      <td>{item.total_slots || 0}</td>
+                      <td>{item[0] || 'unknown'}</td>
+                      <td>{item[1] || 0}</td>
                     </tr>)
                   })
                 }
@@ -105,4 +120,8 @@ const mapStateToProps = (state) => ({
   apiUrl: state.user.apiUrl,
 });
 
-export default connect(mapStateToProps)(StatisticsView);
+const mapDispatchToProps = (dispatch) => ({
+  didLogout: () => dispatch(actions.user.didLogout()),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(StatisticsView);
