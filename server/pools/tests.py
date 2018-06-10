@@ -109,6 +109,11 @@ class TestMultipleReservedSlot(TestCase):
                                                end_datetime=datetime(2018, 4, 1, 18, 00))
         self.res5.save()
 
+        canceled = Reservation.objects.create(pool_id=self.pool.id, user_id=self.user1.id, slot_count=20,
+                                              start_datetime=datetime(2018, 4, 1, 17, 00),
+                                              end_datetime=datetime(2018, 4, 1, 18, 00), is_canceled=True)
+        canceled.save()
+
     def test_overlapping_reservations(self):
         self.assertEqual(
             self.pool.calculate_already_reserved_slots(datetime(2018, 4, 1, 11, 30), datetime(2018, 4, 1, 13, 00)),
@@ -208,6 +213,7 @@ class PoolsTest(TestCase):
         self.assertTrue(p3 in j)
         self.assertTrue(p4 in j)
 
+
 class SingleReservationTest(TestCase):
     def setUp(self):
         self.pool = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
@@ -222,7 +228,6 @@ class SingleReservationTest(TestCase):
         self.factory = APIRequestFactory()
         self.view = SingleReservation.as_view()
 
-
     def test_success_post(self):
         data = {"pool_id": "id1", "slot_count": 2, "start_datetime": "2018-05-20 12:00",
                 "end_datetime": "2018-05-20 14:00"}
@@ -232,7 +237,6 @@ class SingleReservationTest(TestCase):
         self.assertEquals(status.HTTP_201_CREATED, data.status_code)
         res = Reservation.objects.filter(pool=self.pool)
         self.assertEqual(len(res), 1)
-
 
     def test_fail_post(self):
         data = {"pool_id": "id1", "slot_count": 50, "start_datetime": "2018-05-20 12:00",
@@ -287,8 +291,8 @@ class SingleReservationDeleteTest(TestCase):
         return response
 
     def check_if_is_deleted(self, res_id):
-        reservation_num = len(Reservation.objects.filter(id=res_id))
-        self.assertEqual(reservation_num, 0)
+        reservation = Reservation.objects.get(id=res_id)
+        self.assertTrue(reservation.is_canceled)
 
     def test_delete(self):
         total_res = 5
@@ -299,8 +303,8 @@ class SingleReservationDeleteTest(TestCase):
         self.check_if_is_deleted(reservation_id[0])
 
         for i in range(1, total_res):
-            reservation_num = len(Reservation.objects.filter(id=reservation_id[i]))
-            self.assertEqual(reservation_num, 1)
+            reservation = Reservation.objects.get(id=reservation_id[i])
+            self.assertFalse(reservation.is_canceled)
 
     def test_double_delete(self):
         res_id = self.create_reservation()
@@ -308,23 +312,23 @@ class SingleReservationDeleteTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.check_if_is_deleted(res_id)
         response = self.get_response(res_id)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.check_if_is_deleted(res_id)
 
     def test_never_existed(self):
         res_id = self.create_reservation()
-        self.check_if_is_deleted(res_id + 1)
+        self.assertEqual(len(Reservation.objects.filter(id=res_id + 1)), 0)
         response = self.get_response(res_id + 1)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
 
 
 class ReservationsGetTest(TestCase):
     def setUp(self):
         self.pool1 = Pool.objects.create(pool_id="id1", displayName="name1", maximumCount=10,
-                                        enabled=True, description="desc1")
+                                         enabled=True, description="desc1")
         self.pool1.save()
         self.pool2 = Pool.objects.create(pool_id="id2", displayName="name2", maximumCount=20,
-                                        enabled=True, description="desc2")
+                                         enabled=True, description="desc2")
         self.pool2.save()
         self.user1 = User.objects.create_user(username="user1", password="testtesttest1", email="testmail1@mail.mail")
         self.user1.save()
@@ -352,6 +356,11 @@ class ReservationsGetTest(TestCase):
                                                start_datetime=datetime(2018, 4, 1, 16, 00),
                                                end_datetime=datetime(2018, 4, 1, 16, 30))
         self.res4.save()
+
+        canceled = Reservation.objects.create(pool=self.pool2, user=self.user1, slot_count=1,
+                                              start_datetime=datetime(2018, 4, 1, 16, 00),
+                                              end_datetime=datetime(2018, 4, 1, 16, 30), is_canceled=True)
+        canceled.save()
 
         self.factory = APIRequestFactory()
         self.view = Reservations.as_view()
