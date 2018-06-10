@@ -1,11 +1,13 @@
 import csv
 import io
+import time
 from datetime import timedelta, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.core.mail import send_mail, EmailMessage
+from django.db.models import Q
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.renderers import JSONRenderer
@@ -266,3 +268,51 @@ class MailView(APIView):
         except Exception as e:
             return Response('Sending message failed\n' + str(e), status=HTTP_500_INTERNAL_SERVER_ERROR)
         return Response('Email sent', status=HTTP_200_OK)
+
+
+class Statistics(APIView):
+    renderer_classes = (JSONRenderer,)
+    parser_classes = (JSONParser,)
+
+    def get(self, request):
+        """
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :param: start - datetime in format %Y-%m-%d-%H-%M, if not given will be set to 01.01.1970 00:01 \n
+        :param: end - datetime in format %Y-%m-%d-%H-%M, if not given will be set to current datetime \n
+        :return: 200, json with fields start, end (datetimes in format %Y-%m-%d-%H-%M),
+        most_used and least_used (lists of pairs (pool_id, count of reservations in given timeslot)) \n
+        :raise: 401 if authentication fails \n
+        :raise: 400 if start datetime is later than end or arguments contain either incorrect data format
+        or something else entirely
+        """
+        try:
+            if request.GET.get('start') is not None:
+                _start_datetime = datetime.strptime(request.GET.get('start'), "%Y-%m-%d-%H-%M")
+            else:
+                _start_datetime = datetime(1970, 1, 1, 0, 1, 0, 0)
+            if request.GET.get('end') is not None:
+                _end_datetime = datetime.strptime(request.GET.get('end'), "%Y-%m-%d-%H-%M")
+            else:
+                _end_datetime = datetime.now()
+        except (TypeError, ValueError):
+            return Response(status=HTTP_400_BAD_REQUEST, data="Incorrect date format")
+        if _start_datetime > _end_datetime:
+            return Response(status=HTTP_400_BAD_REQUEST, data="Start date after end")
+        reservations_in_timeslot = Reservation.objects.filter(Q(pool__enabled=True),
+                                                              Q(start_datetime__gt=_start_datetime,
+                                                                start_datetime__lt=_end_datetime) |
+                                                              Q(end_datetime__lt=_end_datetime,
+                                                                end_datetime__gt=_start_datetime)).distinct()
+        pairs = []
+        for pool in Pool.objects.all():
+            pairs.append((pool.pool_id, reservations_in_timeslot.filter(pool=pool).count()))
+        pairs.sort(key=lambda element: element[1])
+        least_used = pairs[:10]
+        most_used = pairs[:]
+        most_used.reverse()
+        most_used = most_used[:10]
+        json_map = {'start': _start_datetime.strftime("%Y-%m-%d-%H-%M"),
+                    'end': _end_datetime.strftime("%Y-%m-%d-%H-%M"), 'most_used': most_used,
+                    'least_used': least_used}
+        return Response(data=json_map, status=HTTP_200_OK)
