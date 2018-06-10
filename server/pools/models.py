@@ -30,7 +30,8 @@ class Pool(models.Model):
         reservations = list(Reservation.objects
                             .filter(pool=self)
                             .filter(start_datetime__lt=end)
-                            .filter(end_datetime__gt=start))
+                            .filter(end_datetime__gt=start)
+                            .filter(is_canceled=False))
         all_times = [r.start_datetime for r in reservations] + [r.end_datetime for r in reservations] + [start, end]
         all_times.sort()
         max_used = 0
@@ -63,6 +64,7 @@ class Reservation(models.Model):
     slot_count = models.PositiveSmallIntegerField(default=0)
     start_datetime = models.DateTimeField()
     end_datetime = models.DateTimeField()
+    is_canceled = models.BooleanField(default=False)
 
 
 class ExpirableToken(Token):
