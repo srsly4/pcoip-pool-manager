@@ -93,7 +93,7 @@ class App extends React.Component {
     })
       .then((res) => {
         if (res.status === 409) {
-          alert('Can\'t add reservation');
+          alert('Could not add reservation');
           return;
         }
         if (res.status !== 201) {
