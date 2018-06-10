@@ -2,13 +2,13 @@ import json
 from datetime import datetime
 
 from django.contrib.auth.models import User
-from django.core.files.base import ContentFile
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client
+from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIRequestFactory, force_authenticate
 from .models import Pool, Reservation, ExpirableToken
-from .views import Authentication, PoolsList, SingleReservation, Reservations
+from .views import PoolsList, SingleReservation, Reservations, MailView
 
 
 # Create your tests here.
@@ -476,7 +476,7 @@ class ReservationPostTest(TestCase):
         res = list(Reservation.objects.filter(pool=self.pool))
         self.assertEqual(len(res), 0)
 
-    def test_post_peroid(self):
+    def test_post_period(self):
         file_text = '''"pool_id","start_date","end_date","start_time","end_time","slot_count","peroid"
 "id1","2018-04-01","2018-04-07","14:10:00","15:00:00",2,1
 '''
@@ -491,3 +491,31 @@ class ReservationPostTest(TestCase):
             self.assertTrue(res[i].pool == self.pool and res[i].start_datetime == datetime(2018, 4, i + 1, 14, 10)
                             and res[i].end_datetime == datetime(2018, 4, i + 1, 15, 00)
                             and res[i].slot_count == 2)
+
+
+class MailTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="test", password="test", is_active=True)
+        self.user.save()
+        self.superuser = User.objects.create_superuser(username="admin1", email="myemail@mail.mail",
+                                                       password="pass1")
+        self.superuser.save()
+        token = ExpirableToken.objects.create(user=self.user, key=123123123123)
+        token.save()
+        self.key = token.key
+        self.factory = APIRequestFactory()
+        self.view = MailView.as_view()
+
+    def test_send(self):
+        request = self.factory.post("/mail/", {"content": 'some mail content'}, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEquals(data.status_code, status.HTTP_200_OK)
+        self.assertEquals(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'PCOIPPM message')
+
+    def test_no_content(self):
+        request = self.factory.post("/mail/", {'xyz': 'aaa'}, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEquals(data.status_code, status.HTTP_400_BAD_REQUEST)
