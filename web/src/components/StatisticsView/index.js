@@ -62,6 +62,18 @@ class StatisticsView extends React.Component {
     return (
       <MainView>
         <h1>Statistics</h1>
+        <div className="callout secondary">
+          <label>Show statistics for:</label>
+          <select value={this.state.daysShowed} onChange={(e) => {
+            this.setState({ daysShowed: e.target.value }, () => {
+              this.refreshData();
+            });
+          }}>
+            <option value={7}>Week</option>
+            <option value={14}>Two weeks</option>
+            <option defaultChecked={true} value={30}>Month</option>
+          </select>
+        </div>
         <div className="grid-x grid-padding-x">
           <div className="small-12 medium-6 cell">
             <div className="callout secondary">
