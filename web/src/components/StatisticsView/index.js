@@ -46,6 +46,7 @@ class StatisticsView extends React.Component {
         if (resp.status === 401) {
           alert('Unauthenticated');
           this.props.didLogout();
+          return null;
         }
         return resp.json();
       })

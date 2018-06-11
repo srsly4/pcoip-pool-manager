@@ -27,8 +27,9 @@ class PoolsView extends React.Component {
           if (resp.status === 401) {
             alert('Unauthenticated');
             this.props.didLogout();
+            return [];
           }
-          resp.json()
+          return resp.json()
         })
         .then(resp => {
             this.setState({data: resp});
