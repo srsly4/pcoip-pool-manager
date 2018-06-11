@@ -23,6 +23,7 @@ def process_reservation_row(row):
 
 def make_JSON(reservation):
     js = {"pool_id": reservation.pool.pool_id,
+          "reservation_id": reservation.id,
           "slot_count": reservation.slot_count,
           "start_datetime": str(reservation.start_datetime),
           "end_datetime": str(reservation.end_datetime)}
