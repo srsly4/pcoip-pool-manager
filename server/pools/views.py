@@ -133,7 +133,7 @@ class Reservations(APIView):
         user = request.user
         filters["user"] = user
         reservations = list(Reservation.objects.filter(**filters))
-        json_reservations = {"reservations": [parse_utils.reservation2json(r) for r in reservations]}
+        json_reservations = {"reservations": [parse_utils.reservation_to_json(r) for r in reservations]}
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
