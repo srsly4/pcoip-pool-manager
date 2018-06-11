@@ -70,7 +70,8 @@ class Reservation(models.Model):
     is_canceled = models.BooleanField(default=False)
 
     def __str__(self):
-        return "User:{} Pool:{} <{}-{}>".format(self.pool.pool_id, self.user.username, self.start_datetime, self.end_datetime)
+        return "User:{} Pool:{} <{}-{}>".format(self.pool.pool_id, self.user.username, self.start_datetime,
+                                                self.end_datetime)
 
 
 class ExpirableToken(Token):
