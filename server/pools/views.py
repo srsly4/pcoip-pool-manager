@@ -88,6 +88,7 @@ class SingleReservation(APIView):
         :raise: 401 if token authentication fails \n
         """
         body = request.data
+        description = ""
         try:
             to_cancel = Reservation.objects.get(id=body['id'])
             to_cancel.is_canceled = True
@@ -95,7 +96,14 @@ class SingleReservation(APIView):
             status = HTTP_204_NO_CONTENT
         except ObjectDoesNotExist:
             status = HTTP_404_NOT_FOUND
-        return Response(status=status)
+            description = "No such reservation exists"
+        except KeyError:
+            status = HTTP_400_BAD_REQUEST
+            description = "No id field in body"
+        except ValueError:
+            status = HTTP_400_BAD_REQUEST
+            description = "id is not an integer"
+        return Response(description, status=status)
 
 
 class Reservations(APIView):
@@ -128,7 +136,7 @@ class Reservations(APIView):
         user = request.user
         filters["user"] = user
         reservations = list(Reservation.objects.filter(**filters))
-        json_reservations = {"reservations": [parse_utils.make_JSON(r) for r in reservations]}
+        json_reservations = {"reservations": [parse_utils.reservation_to_json(r) for r in reservations]}
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
