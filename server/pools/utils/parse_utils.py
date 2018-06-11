@@ -21,7 +21,7 @@ def process_reservation_row(row):
             'period': int(row[6])}
 
 
-def make_JSON(reservation):
+def reservation2json(reservation):
     js = {"pool_id": reservation.pool.pool_id,
           "reservation_id": reservation.id,
           "slot_count": reservation.slot_count,
