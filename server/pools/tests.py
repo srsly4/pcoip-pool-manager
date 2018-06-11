@@ -271,7 +271,7 @@ class SingleReservationDeleteTest(TestCase):
         self.factory = APIRequestFactory()
         self.view = SingleReservation.as_view()
 
-    def create_reservation(self):
+    def _create_reservation(self):
         res = Reservation.objects.create(
             pool=self.pool, user=self.user, slot_count=1,
             start_datetime=datetime(2018, 4, 1, 11, 15),
@@ -280,7 +280,7 @@ class SingleReservationDeleteTest(TestCase):
         res.save()
         return res.id
 
-    def get_response(self, res_id):
+    def _get_response(self, res_id):
         request = self.factory.delete(
             "/reservation/",
             data={"id": res_id},
@@ -290,35 +290,35 @@ class SingleReservationDeleteTest(TestCase):
         response = self.view(request).render()
         return response
 
-    def check_if_is_deleted(self, res_id):
+    def _check_if_is_deleted(self, res_id):
         reservation = Reservation.objects.get(id=res_id)
         self.assertTrue(reservation.is_canceled)
 
     def test_delete(self):
         total_res = 5
-        reservation_id = [self.create_reservation() for _ in range(total_res)]
+        reservation_id = [self._create_reservation() for _ in range(total_res)]
 
-        response = self.get_response(reservation_id[0])
+        response = self._get_response(reservation_id[0])
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.check_if_is_deleted(reservation_id[0])
+        self._check_if_is_deleted(reservation_id[0])
 
         for i in range(1, total_res):
             reservation = Reservation.objects.get(id=reservation_id[i])
             self.assertFalse(reservation.is_canceled)
 
     def test_double_delete(self):
-        res_id = self.create_reservation()
-        response = self.get_response(res_id)
+        res_id = self._create_reservation()
+        response = self._get_response(res_id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.check_if_is_deleted(res_id)
-        response = self.get_response(res_id)
+        self._check_if_is_deleted(res_id)
+        response = self._get_response(res_id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.check_if_is_deleted(res_id)
+        self._check_if_is_deleted(res_id)
 
     def test_never_existed(self):
-        res_id = self.create_reservation()
+        res_id = self._create_reservation()
         self.assertEqual(len(Reservation.objects.filter(id=res_id + 1)), 0)
-        response = self.get_response(res_id + 1)
+        response = self._get_response(res_id + 1)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
