@@ -13,22 +13,7 @@ class StatisticsView extends React.Component {
 
     this.state = {
       daysShowed: 30,
-      statistics: {
-        topReservations: [
-          { pool_id: 's7n-girls', total_slots: 17 },
-          { pool_id: 's7n-vm1', total_slots: 15 },
-          { pool_id: 's7n-vm2', total_slots: 12 },
-          { pool_id: 's7n-vm3', total_slots: 5 },
-          { pool_id: 's7n-vm4', total_slots: 2 },
-        ],
-        leastReservations: [
-          { pool_id: 's7n-vm11', total_slots: 0 },
-          { pool_id: 's7n-vm12', total_slots: 0 },
-          { pool_id: 's7n-vm23', total_slots: 0 },
-          { pool_id: 's7n-vm34', total_slots: 1 },
-          { pool_id: 's7n-vm45', total_slots: 1 },
-        ],
-      }
+      statistics: {}
     }
   }
 
@@ -37,7 +22,7 @@ class StatisticsView extends React.Component {
   }
 
   refreshData() {
-    fetch(`${this.props.apiUrl}/stats?startDate=${moment().subtract(this.state.daysShowed, 'days').format('YYYY-MM-DD-HH-mm')}`, {
+    fetch(`${this.props.apiUrl}/stats?start=${moment().subtract(this.state.daysShowed, 'days').format('YYYY-MM-DD-HH-mm')}`, {
       headers: {
         'Authorization': `Token ${this.props.token}`
       }

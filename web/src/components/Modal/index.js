@@ -30,6 +30,8 @@ class App extends React.Component {
       modalIsOpen: false,
       startDate: moment(),
       endDate: moment(),
+      mailViewVisible: false,
+      mailContent: '',
     };
 
     this.openModal = this.openModal.bind(this);
@@ -38,6 +40,7 @@ class App extends React.Component {
     this.handleChangeStart = this.handleChangeStart.bind(this);
     this.handleChangeEnd = this.handleChangeEnd.bind(this);
     this.sendRequest = this.sendRequest.bind(this);
+    this.sendMail = this.sendMail.bind(this);
     this.setData = this.setData.bind(this);
   }
 
@@ -93,7 +96,17 @@ class App extends React.Component {
     })
       .then((res) => {
         if (res.status === 409) {
-          alert('Could not add reservation');
+          res.text().then((text) => {
+            alert('Could not add reservation: ' + text);
+            this.setState({
+              mailViewVisible: true,
+              mailContent: `Please add more '${this.props.poolId}' instances `
+              + `from ${this.state.startDate.format('YYYY-MM-DD HH:mm')} `
+              + `to ${this.state.endDate.format('YYYY-MM-DD HH:mm')}. `
+              + `Requested ${this.state.poolCount} VM(s).`
+            });
+          });
+
           return;
         }
         if (res.status !== 201) {
@@ -108,6 +121,28 @@ class App extends React.Component {
       .catch(alert);
   }
 
+  sendMail() {
+    fetch(`${this.props.apiUrl}/mail/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${this.props.token}`,
+      },
+      body: JSON.stringify({
+        content: this.state.mailContent,
+      }),
+    })
+      .then((res) => {
+        if (res.status !== 200) {
+          res.text().then((text) => {
+            alert('Error ' + res.status + ' ' + text);
+          });
+          return;
+        }
+        alert('Mail sent successfully!');
+      })
+      .catch(alert);
+  }
 
   render() {
     return (
@@ -156,6 +191,11 @@ class App extends React.Component {
             <button className="button primary" onClick={ this.sendRequest }>Rezerwuj</button>
             <button className="button secondary" onClick={ this.closeModal }>Cofnij</button>
           </div>
+          { this.state.mailViewVisible && (<div>
+            <p>If you want, you can send a mail to the administrator:</p>
+            <textarea value={ this.state.mailContent } onChange={ e => this.setState({mailContent: e.target.value}) }/>
+            <button className="button primary" onClick={ this.sendMail }>Send mail</button>
+          </div>) }
         </Modal>
       </div>
     );
