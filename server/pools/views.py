@@ -1,12 +1,11 @@
 import csv
 import io
-import time
 from datetime import timedelta, datetime
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from django.core.mail import send_mail, EmailMessage
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
 from django.db.models import Q
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
@@ -78,7 +77,7 @@ class SingleReservation(APIView):
                 reservation.save()
                 return Response("Reservation added to database", HTTP_201_CREATED)
             else:
-                return Response("Can't add reservation", HTTP_409_CONFLICT)
+                return Response("Not enough slots left to add reservation", HTTP_409_CONFLICT)
         except KeyError:
             return Response("Incorrect JSON format", HTTP_400_BAD_REQUEST)
 
@@ -305,10 +304,12 @@ class Statistics(APIView):
                 _end_datetime = datetime.strptime(request.GET.get('end'), "%Y-%m-%d-%H-%M")
             else:
                 _end_datetime = datetime.now()
-        except (TypeError, ValueError):
+        except TypeError:
             return Response(status=HTTP_400_BAD_REQUEST, data="Incorrect date format")
+        except ValueError:
+            return Response(status=HTTP_400_BAD_REQUEST, data="Argument not a date")
         if _start_datetime > _end_datetime:
-            return Response(status=HTTP_400_BAD_REQUEST, data="Start date after end")
+            return Response(status=HTTP_400_BAD_REQUEST, data="Start datetime set after end datetime")
         reservations_in_timeslot = Reservation.objects.filter(Q(pool__enabled=True),
                                                               Q(start_datetime__gt=_start_datetime,
                                                                 start_datetime__lt=_end_datetime) |
