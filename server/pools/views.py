@@ -5,6 +5,8 @@ from datetime import timedelta, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.core.mail import send_mail, EmailMessage
 from django.db.models import Q
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
@@ -13,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 
+from pcoippoolmanager import settings
 from .models import Pool
 from .models import Reservation, ExpirableToken
 from .utils import parse_utils
@@ -229,6 +232,42 @@ class PoolsList(APIView):
         for p in to_add:
             p.save()
         return Response("Pools added to database", status=HTTP_201_CREATED)
+
+
+class MailView(APIView):
+    """
+    View responsible for sending emails
+    """
+    parser_classes = (JSONParser,)
+
+    def post(self, request):
+        """
+        :param: JSON containing field 'content', and optional field 'reply_email'\n
+        :return: 200 if message has been sent\n
+        :raise: 401 if token authentication fails \n
+        :raise: 400 if no content has been specified\n
+        :raise: 500 if message could not be sent
+        """
+        try:
+            content = request.data['content']
+        except KeyError:
+            return Response('No message content has been specified', status=HTTP_400_BAD_REQUEST)
+        try:
+            reply_address = request.data['reply_address']
+        except KeyError:
+            reply_address = request.user.email
+        admins = list(User.objects.filter(is_superuser=True))
+        recipients = [user.email for user in admins]
+        mail = EmailMessage('PCOIPPM message',
+                            content,
+                            settings.DEFAULT_FROM_EMAIL,
+                            recipients,
+                            headers={'Reply-To': reply_address})
+        try:
+            mail.send()
+        except Exception as e:
+            return Response('Sending message failed\n' + str(e), status=HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response('Email sent', status=HTTP_200_OK)
 
 
 class Statistics(APIView):
