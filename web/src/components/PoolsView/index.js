@@ -6,8 +6,9 @@ import ReactTable from "react-table";
 import "react-table/react-table.css";
 import Modal from '../Modal'
 import fetch from "isomorphic-fetch";
-import matchSorter from 'match-sorter'
 import actions from '../../actions';
+import matchSorter from 'match-sorter';
+import './index.css';
 
 class PoolsView extends React.Component {
     constructor(props) {
@@ -57,32 +58,35 @@ class PoolsView extends React.Component {
                             accessor: d=>d.displayName,
                             filterMethod: (filter, rows) =>
                                 matchSorter(rows, filter.value, { keys: ["displayName"] }),
-                            filterAll: true
+                            filterAll: true,
+                            maxWidth: 300
                         },
                         {
                             Header: "Maximum count",
-                            accessor: 'maximumCount',
+                            id: "maximumCount",
+                            accessor: d => d.maximumCount,
+                            maxWidth: 150
                         },
                         {
                             Header: "Description",
                             id: "description",
                             accessor: d => d.description,
                             filterMethod: (filter, rows) =>
-                                matchSorter(rows, filter.value, { keys: ["description"] }),
-                            filterAll: true
-
+                                matchSorter(rows, filter.value, {keys: ["description"]}),
+                            filterAll: true,
                         },
                         {
                             Header: 'Actions',
                             id: 'click-me-button',
                             accessor: d=><Modal onSucessAdd={() => { this.componentDidMount(); }}
-                                                name={d.displayName} info={d.description} poolId={d.pool_id}/>
+                                                name={d.displayName} info={d.description} poolId={d.pool_id} maxCount={d.maximumCount}/>,
+                            sortable: false,
+                            filterable: false,
+                            maxWidth: 130
                         },
-
-
                     ]}
                     defaultPageSize={15}
-                    className="-striped -highlight"
+                    className="-striped -highlight center"
                 />
             </div>
         );
