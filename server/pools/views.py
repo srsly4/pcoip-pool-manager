@@ -92,6 +92,8 @@ class SingleReservation(APIView):
             status = HTTP_204_NO_CONTENT
         except ObjectDoesNotExist:
             status = HTTP_404_NOT_FOUND
+        except KeyError:
+            status = HTTP_400_BAD_REQUEST
         return Response(status=status)
 
 
