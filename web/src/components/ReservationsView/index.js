@@ -7,6 +7,7 @@ import ReactTable from "react-table";
 import "react-table/react-table.css";
 import MainView from '../MainView';
 import matchSorter from 'match-sorter';
+import actions from '../../actions';
 
 const customStyles = {
     content : {
@@ -214,4 +215,8 @@ const mapStateToProps = (state) => ({
   apiUrl: state.user.apiUrl,
 });
 
-export default connect(mapStateToProps)(ReservationsView);
+const mapDispatchToProps = (dispatch) => ({
+  didLogout: () => dispatch(actions.user.didLogout()),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(ReservationsView);
