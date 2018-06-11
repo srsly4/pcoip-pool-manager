@@ -6,9 +6,9 @@ import ReactTable from "react-table";
 import "react-table/react-table.css";
 import Modal from '../Modal'
 import fetch from "isomorphic-fetch";
+import actions from '../../actions';
 import matchSorter from 'match-sorter';
 import './index.css';
-
 
 class PoolsView extends React.Component {
     constructor(props) {
@@ -24,7 +24,14 @@ class PoolsView extends React.Component {
                 'Authorization': `Token ${this.props.token}`
             }
         })
-        .then(resp => resp.json())
+        .then(resp => {
+          if (resp.status === 401) {
+            alert('Unauthenticated');
+            this.props.didLogout();
+            return [];
+          }
+          return resp.json()
+        })
         .then(resp => {
             this.setState({data: resp});
         })
@@ -39,7 +46,7 @@ class PoolsView extends React.Component {
             <div>
               <h1>Pools</h1>
                 <ReactTable
-                    data={data}
+                    data={data || []}
                     filterable
                     defaultFilterMethod={(filter, row) =>
                         String(row[filter.id]) === filter.value}
@@ -91,4 +98,8 @@ const mapStateToProps = (state) => ({
     apiUrl: state.user.apiUrl,
 });
 
-export default connect(mapStateToProps)(PoolsView);
+const mapDispatchToProps = (dispatch) => ({
+  didLogout: () => dispatch(actions.user.didLogout()),
+});
+
+export default connect(mapStateToProps, mapDispatchToProps)(PoolsView);

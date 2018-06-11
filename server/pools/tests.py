@@ -2,13 +2,13 @@ import json
 from datetime import datetime
 
 from django.contrib.auth.models import User
-from django.core.files.base import ContentFile
+from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase, Client
+from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIRequestFactory, force_authenticate
 from .models import Pool, Reservation, ExpirableToken
-from .views import Authentication, PoolsList, SingleReservation, Reservations, Statistics
+from .views import PoolsList, SingleReservation, Reservations, MailView, Statistics
 
 
 # Create your tests here.
@@ -174,21 +174,22 @@ class PoolsTest(TestCase):
         data = self.view(request).render()
         self.assertEquals(status.HTTP_200_OK, data.status_code)
         j = json.loads(data.content.decode())
+        self.assertEqual(len(j), 2)
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
-              "maximumCount": self.pool1.maximumCount,
+              "maximumCount": self.pool1.maximumCount, "id": 1,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
         p2 = {"pool_id": self.pool2.pool_id, "displayName": self.pool2.displayName,
-              "maximumCount": self.pool2.maximumCount,
+              "maximumCount": self.pool2.maximumCount, "id": 2,
               "enabled": self.pool2.enabled, "description": self.pool2.description}
         self.assertTrue(p1 in j)
         self.assertTrue(p2 in j)
 
     def test_post(self):
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
-              "maximumCount": self.pool1.maximumCount,
+              "maximumCount": self.pool1.maximumCount, "id": self.pool1.id,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
         p2 = {"pool_id": self.pool2.pool_id, "displayName": self.pool2.displayName,
-              "maximumCount": self.pool2.maximumCount,
+              "maximumCount": self.pool2.maximumCount, "id": self.pool2.id,
               "enabled": self.pool2.enabled, "description": self.pool2.description}
         p3 = {"pool_id": "id3", "displayName": "disp3name", "maximumCount": 50,
               "enabled": False, "description": "description3"}
@@ -208,6 +209,8 @@ class PoolsTest(TestCase):
         force_authenticate(request=request, user=self.user, token=self.key)
         data = self.view(request).render()
         j = json.loads(data.content.decode())
+        p3["id"] = j[0]["id"]
+        p4["id"] = j[1]["id"]
         self.assertFalse(p1 in j)
         self.assertFalse(p2 in j)
         self.assertTrue(p3 in j)
@@ -271,7 +274,7 @@ class SingleReservationDeleteTest(TestCase):
         self.factory = APIRequestFactory()
         self.view = SingleReservation.as_view()
 
-    def create_reservation(self):
+    def _create_reservation(self):
         res = Reservation.objects.create(
             pool=self.pool, user=self.user, slot_count=1,
             start_datetime=datetime(2018, 4, 1, 11, 15),
@@ -280,7 +283,7 @@ class SingleReservationDeleteTest(TestCase):
         res.save()
         return res.id
 
-    def get_response(self, res_id):
+    def _get_response(self, res_id):
         request = self.factory.delete(
             "/reservation/",
             data={"id": res_id},
@@ -290,35 +293,35 @@ class SingleReservationDeleteTest(TestCase):
         response = self.view(request).render()
         return response
 
-    def check_if_is_deleted(self, res_id):
+    def _check_if_is_deleted(self, res_id):
         reservation = Reservation.objects.get(id=res_id)
         self.assertTrue(reservation.is_canceled)
 
     def test_delete(self):
         total_res = 5
-        reservation_id = [self.create_reservation() for _ in range(total_res)]
+        reservation_id = [self._create_reservation() for _ in range(total_res)]
 
-        response = self.get_response(reservation_id[0])
+        response = self._get_response(reservation_id[0])
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.check_if_is_deleted(reservation_id[0])
+        self._check_if_is_deleted(reservation_id[0])
 
         for i in range(1, total_res):
             reservation = Reservation.objects.get(id=reservation_id[i])
             self.assertFalse(reservation.is_canceled)
 
     def test_double_delete(self):
-        res_id = self.create_reservation()
-        response = self.get_response(res_id)
+        res_id = self._create_reservation()
+        response = self._get_response(res_id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.check_if_is_deleted(res_id)
-        response = self.get_response(res_id)
+        self._check_if_is_deleted(res_id)
+        response = self._get_response(res_id)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.check_if_is_deleted(res_id)
+        self._check_if_is_deleted(res_id)
 
     def test_never_existed(self):
-        res_id = self.create_reservation()
+        res_id = self._create_reservation()
         self.assertEqual(len(Reservation.objects.filter(id=res_id + 1)), 0)
-        response = self.get_response(res_id + 1)
+        response = self._get_response(res_id + 1)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
 
@@ -476,7 +479,7 @@ class ReservationPostTest(TestCase):
         res = list(Reservation.objects.filter(pool=self.pool))
         self.assertEqual(len(res), 0)
 
-    def test_post_peroid(self):
+    def test_post_period(self):
         file_text = '''"pool_id","start_date","end_date","start_time","end_time","slot_count","peroid"
 "id1","2018-04-01","2018-04-07","14:10:00","15:00:00",2,1
 '''
@@ -548,7 +551,7 @@ class StatisticsTest(TestCase):
         self.assertEqual(response.data['start'], start_string)
         self.assertEqual(response.data['end'], end_string)
 
-    def test_perion_not_given(self):
+    def test_period_not_given(self):
         request = self.factory.get("/stats/")
         force_authenticate(request=request, user=self.user, token=self.key)
         response = self.view(request).render()
@@ -567,3 +570,31 @@ class StatisticsTest(TestCase):
         force_authenticate(request=request, user=self.user, token=self.key)
         response = self.view(request).render()
         self.assertEqual(status.HTTP_400_BAD_REQUEST, response.status_code)
+
+
+class MailTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username="test", password="test", is_active=True)
+        self.user.save()
+        self.superuser = User.objects.create_superuser(username="admin1", email="myemail@mail.mail",
+                                                       password="pass1")
+        self.superuser.save()
+        token = ExpirableToken.objects.create(user=self.user, key=123123123123)
+        token.save()
+        self.key = token.key
+        self.factory = APIRequestFactory()
+        self.view = MailView.as_view()
+
+    def test_send(self):
+        request = self.factory.post("/mail/", {"content": 'some mail content'}, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEquals(data.status_code, status.HTTP_200_OK)
+        self.assertEquals(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'PCOIPPM message')
+
+    def test_no_content(self):
+        request = self.factory.post("/mail/", {'xyz': 'aaa'}, format='json')
+        force_authenticate(request=request, user=self.user, token=self.key)
+        data = self.view(request).render()
+        self.assertEquals(data.status_code, status.HTTP_400_BAD_REQUEST)

@@ -20,6 +20,9 @@ class Pool(models.Model):
     enabled = models.BooleanField(default=True)
     description = models.TextField(default="")
 
+    def __str__(self):
+        return self.pool_id
+
     def calculate_already_reserved_slots(self, start, end):
         """
         Counts number of slots already taken
@@ -66,6 +69,10 @@ class Reservation(models.Model):
     end_datetime = models.DateTimeField()
     is_canceled = models.BooleanField(default=False)
 
+    def __str__(self):
+        return "User:{} Pool:{} <{}-{}>".format(self.pool.pool_id, self.user.username, self.start_datetime,
+                                                self.end_datetime)
+
 
 class ExpirableToken(Token):
     """
@@ -93,5 +100,6 @@ class ExpirableToken(Token):
         return self
 
     def refresh(self):
+        self.last_refresh_datetime = datetime.now()
         self.save()
         return self

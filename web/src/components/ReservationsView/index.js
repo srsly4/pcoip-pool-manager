@@ -43,7 +43,14 @@ class ReservationsView extends React.Component {
         'Authorization': `Token ${this.props.token}`
       }
     })
-      .then(resp => resp.json())
+      .then(resp => {
+        if (resp.status === 401) {
+          alert('Unauthenticated');
+          this.props.didLogout();
+          return [];
+        }
+        return resp.json();
+      })
       .then(json => {
         this.setState({reservations: json.reservations || []});
       })

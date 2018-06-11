@@ -1,10 +1,11 @@
 import csv
 import io
-import time
 from datetime import timedelta, datetime
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
 from django.db.models import Q
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
@@ -13,6 +14,7 @@ from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 
+from pcoippoolmanager import settings
 from .models import Pool
 from .models import Reservation, ExpirableToken
 from .utils import parse_utils
@@ -64,14 +66,18 @@ class SingleReservation(APIView):
         try:
             body = request.data
             pool = Pool.objects.get(pool_id=body['pool_id'])
-            if pool.can_place_reservation(body['slot_count'], body['start_datetime'], body['end_datetime']):
+            format_data_time = '%Y-%m-%d %H:%M'
+            start = datetime.strptime(body['start_datetime'], format_data_time)
+            end = datetime.strptime(body['end_datetime'], format_data_time)
+
+            if pool.can_place_reservation(body['slot_count'], start, end):
                 reservation = Reservation(pool=pool, user=request.user, slot_count=body['slot_count'],
                                           start_datetime=body['start_datetime'],
                                           end_datetime=body['end_datetime'])
                 reservation.save()
                 return Response("Reservation added to database", HTTP_201_CREATED)
             else:
-                return Response("Can't add reservation", HTTP_409_CONFLICT)
+                return Response("Not enough slots left to add reservation", HTTP_409_CONFLICT)
         except KeyError:
             return Response("Incorrect JSON format", HTTP_400_BAD_REQUEST)
 
@@ -85,6 +91,7 @@ class SingleReservation(APIView):
         :raise: 401 if token authentication fails \n
         """
         body = request.data
+        description = ""
         try:
             to_cancel = Reservation.objects.get(id=body['id'])
             to_cancel.is_canceled = True
@@ -92,7 +99,14 @@ class SingleReservation(APIView):
             status = HTTP_204_NO_CONTENT
         except ObjectDoesNotExist:
             status = HTTP_404_NOT_FOUND
-        return Response(status=status)
+            description = "No such reservation exists"
+        except KeyError:
+            status = HTTP_400_BAD_REQUEST
+            description = "No id field in body"
+        except ValueError:
+            status = HTTP_400_BAD_REQUEST
+            description = "id is not an integer"
+        return Response(description, status=status)
 
 
 class Reservations(APIView):
@@ -125,7 +139,7 @@ class Reservations(APIView):
         user = request.user
         filters["user"] = user
         reservations = list(Reservation.objects.filter(**filters))
-        json_reservations = {"reservations": [parse_utils.make_JSON(r) for r in reservations]}
+        json_reservations = {"reservations": [parse_utils.reservation_to_json(r) for r in reservations]}
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
@@ -199,8 +213,6 @@ class PoolsList(APIView):
         :raise: 401 if token authentication fails \n
         """
         pools = list(Pool.objects.values())
-        for p in pools:
-            del p['id']
         return Response(pools, content_type="application/json")
 
     def post(self, request):
@@ -231,6 +243,42 @@ class PoolsList(APIView):
         return Response("Pools added to database", status=HTTP_201_CREATED)
 
 
+class MailView(APIView):
+    """
+    View responsible for sending emails
+    """
+    parser_classes = (JSONParser,)
+
+    def post(self, request):
+        """
+        :param: JSON containing field 'content', and optional field 'reply_email'\n
+        :return: 200 if message has been sent\n
+        :raise: 401 if token authentication fails \n
+        :raise: 400 if no content has been specified\n
+        :raise: 500 if message could not be sent
+        """
+        try:
+            content = request.data['content']
+        except KeyError:
+            return Response('No message content has been specified', status=HTTP_400_BAD_REQUEST)
+        try:
+            reply_address = request.data['reply_address']
+        except KeyError:
+            reply_address = request.user.email
+        admins = list(User.objects.filter(is_superuser=True))
+        recipients = [user.email for user in admins]
+        mail = EmailMessage('PCOIPPM message',
+                            content,
+                            settings.DEFAULT_FROM_EMAIL,
+                            recipients,
+                            headers={'Reply-To': reply_address})
+        try:
+            mail.send()
+        except Exception as e:
+            return Response('Sending message failed\n' + str(e), status=HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response('Email sent', status=HTTP_200_OK)
+
+
 class Statistics(APIView):
     renderer_classes = (JSONRenderer,)
     parser_classes = (JSONParser,)
@@ -256,10 +304,12 @@ class Statistics(APIView):
                 _end_datetime = datetime.strptime(request.GET.get('end'), "%Y-%m-%d-%H-%M")
             else:
                 _end_datetime = datetime.now()
-        except (TypeError, ValueError):
+        except TypeError:
             return Response(status=HTTP_400_BAD_REQUEST, data="Incorrect date format")
+        except ValueError:
+            return Response(status=HTTP_400_BAD_REQUEST, data="Argument not a date")
         if _start_datetime > _end_datetime:
-            return Response(status=HTTP_400_BAD_REQUEST, data="Start date after end")
+            return Response(status=HTTP_400_BAD_REQUEST, data="Start datetime set after end datetime")
         reservations_in_timeslot = Reservation.objects.filter(Q(pool__enabled=True),
                                                               Q(start_datetime__gt=_start_datetime,
                                                                 start_datetime__lt=_end_datetime) |
