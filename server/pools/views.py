@@ -1,9 +1,13 @@
 import csv
 import io
+import time
 from datetime import timedelta, datetime
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from django.core.mail import send_mail, EmailMessage
+from django.db.models import Q
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
 from rest_framework.renderers import JSONRenderer
@@ -11,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 
+from pcoippoolmanager import settings
 from .models import Pool
 from .models import Reservation, ExpirableToken
 from .utils import parse_utils
@@ -87,6 +92,7 @@ class SingleReservation(APIView):
         :raise: 401 if token authentication fails \n
         """
         body = request.data
+        description = ""
         try:
             to_cancel = Reservation.objects.get(id=body['id'])
             to_cancel.is_canceled = True
@@ -94,7 +100,14 @@ class SingleReservation(APIView):
             status = HTTP_204_NO_CONTENT
         except ObjectDoesNotExist:
             status = HTTP_404_NOT_FOUND
-        return Response(status=status)
+            description = "No such reservation exists"
+        except KeyError:
+            status = HTTP_400_BAD_REQUEST
+            description = "No id field in body"
+        except ValueError:
+            status = HTTP_400_BAD_REQUEST
+            description = "id is not an integer"
+        return Response(description, status=status)
 
 
 class Reservations(APIView):
@@ -127,7 +140,7 @@ class Reservations(APIView):
         user = request.user
         filters["user"] = user
         reservations = list(Reservation.objects.filter(**filters))
-        json_reservations = {"reservations": [parse_utils.make_JSON(r) for r in reservations]}
+        json_reservations = {"reservations": [parse_utils.reservation_to_json(r) for r in reservations]}
         return Response(json_reservations, content_type="application/json")
 
     def post(self, request):
@@ -229,3 +242,87 @@ class PoolsList(APIView):
         for p in to_add:
             p.save()
         return Response("Pools added to database", status=HTTP_201_CREATED)
+
+
+class MailView(APIView):
+    """
+    View responsible for sending emails
+    """
+    parser_classes = (JSONParser,)
+
+    def post(self, request):
+        """
+        :param: JSON containing field 'content', and optional field 'reply_email'\n
+        :return: 200 if message has been sent\n
+        :raise: 401 if token authentication fails \n
+        :raise: 400 if no content has been specified\n
+        :raise: 500 if message could not be sent
+        """
+        try:
+            content = request.data['content']
+        except KeyError:
+            return Response('No message content has been specified', status=HTTP_400_BAD_REQUEST)
+        try:
+            reply_address = request.data['reply_address']
+        except KeyError:
+            reply_address = request.user.email
+        admins = list(User.objects.filter(is_superuser=True))
+        recipients = [user.email for user in admins]
+        mail = EmailMessage('PCOIPPM message',
+                            content,
+                            settings.DEFAULT_FROM_EMAIL,
+                            recipients,
+                            headers={'Reply-To': reply_address})
+        try:
+            mail.send()
+        except Exception as e:
+            return Response('Sending message failed\n' + str(e), status=HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response('Email sent', status=HTTP_200_OK)
+
+
+class Statistics(APIView):
+    renderer_classes = (JSONRenderer,)
+    parser_classes = (JSONParser,)
+
+    def get(self, request):
+        """
+        :param: 'Authorization' header containing valid token, prepended with :keyword 'Token', for example 'Token 123'
+        \n
+        :param: start - datetime in format %Y-%m-%d-%H-%M, if not given will be set to 01.01.1970 00:01 \n
+        :param: end - datetime in format %Y-%m-%d-%H-%M, if not given will be set to current datetime \n
+        :return: 200, json with fields start, end (datetimes in format %Y-%m-%d-%H-%M),
+        most_used and least_used (lists of pairs (pool_id, count of reservations in given timeslot)) \n
+        :raise: 401 if authentication fails \n
+        :raise: 400 if start datetime is later than end or arguments contain either incorrect data format
+        or something else entirely
+        """
+        try:
+            if request.GET.get('start') is not None:
+                _start_datetime = datetime.strptime(request.GET.get('start'), "%Y-%m-%d-%H-%M")
+            else:
+                _start_datetime = datetime(1970, 1, 1, 0, 1, 0, 0)
+            if request.GET.get('end') is not None:
+                _end_datetime = datetime.strptime(request.GET.get('end'), "%Y-%m-%d-%H-%M")
+            else:
+                _end_datetime = datetime.now()
+        except (TypeError, ValueError):
+            return Response(status=HTTP_400_BAD_REQUEST, data="Incorrect date format")
+        if _start_datetime > _end_datetime:
+            return Response(status=HTTP_400_BAD_REQUEST, data="Start date after end")
+        reservations_in_timeslot = Reservation.objects.filter(Q(pool__enabled=True),
+                                                              Q(start_datetime__gt=_start_datetime,
+                                                                start_datetime__lt=_end_datetime) |
+                                                              Q(end_datetime__lt=_end_datetime,
+                                                                end_datetime__gt=_start_datetime)).distinct()
+        pairs = []
+        for pool in Pool.objects.all():
+            pairs.append((pool.pool_id, reservations_in_timeslot.filter(pool=pool).count()))
+        pairs.sort(key=lambda element: element[1])
+        least_used = pairs[:10]
+        most_used = pairs[:]
+        most_used.reverse()
+        most_used = most_used[:10]
+        json_map = {'start': _start_datetime.strftime("%Y-%m-%d-%H-%M"),
+                    'end': _end_datetime.strftime("%Y-%m-%d-%H-%M"), 'most_used': most_used,
+                    'least_used': least_used}
+        return Response(data=json_map, status=HTTP_200_OK)

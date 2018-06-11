@@ -147,3 +147,12 @@ CORS_ORIGIN_WHITELIST = (
     '127.0.0.1:3000',
     'ec2-34-227-194-105.compute-1.amazonaws.com'
 )
+
+EMAIL_USE_TLS = True
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST_USER = 'pcoippm@gmail.com'
+DEFAULT_FROM_EMAIL = 'pcoippm@gmail.com'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+# high level security:
+EMAIL_HOST_PASSWORD = 'PCOIPPM2018'
