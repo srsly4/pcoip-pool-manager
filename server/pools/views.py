@@ -67,7 +67,7 @@ class SingleReservation(APIView):
         try:
             body = request.data
             pool = Pool.objects.get(pool_id=body['pool_id'])
-            format_data_time = '%Y-%m-%d %H:%M:%S'
+            format_data_time = '%Y-%m-%d %H:%M'
             start = datetime.strptime(body['start_datetime'], format_data_time)
             end = datetime.strptime(body['end_datetime'], format_data_time)
 
