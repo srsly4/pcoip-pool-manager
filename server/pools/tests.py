@@ -174,21 +174,22 @@ class PoolsTest(TestCase):
         data = self.view(request).render()
         self.assertEquals(status.HTTP_200_OK, data.status_code)
         j = json.loads(data.content.decode())
+        self.assertEqual(len(j), 2)
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
-              "maximumCount": self.pool1.maximumCount,
+              "maximumCount": self.pool1.maximumCount, "id": 1,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
         p2 = {"pool_id": self.pool2.pool_id, "displayName": self.pool2.displayName,
-              "maximumCount": self.pool2.maximumCount,
+              "maximumCount": self.pool2.maximumCount, "id": 2,
               "enabled": self.pool2.enabled, "description": self.pool2.description}
         self.assertTrue(p1 in j)
         self.assertTrue(p2 in j)
 
     def test_post(self):
         p1 = {"pool_id": self.pool1.pool_id, "displayName": self.pool1.displayName,
-              "maximumCount": self.pool1.maximumCount,
+              "maximumCount": self.pool1.maximumCount, "id": self.pool1.id,
               "enabled": self.pool1.enabled, "description": self.pool1.description}
         p2 = {"pool_id": self.pool2.pool_id, "displayName": self.pool2.displayName,
-              "maximumCount": self.pool2.maximumCount,
+              "maximumCount": self.pool2.maximumCount, "id": self.pool2.id,
               "enabled": self.pool2.enabled, "description": self.pool2.description}
         p3 = {"pool_id": "id3", "displayName": "disp3name", "maximumCount": 50,
               "enabled": False, "description": "description3"}
@@ -208,6 +209,8 @@ class PoolsTest(TestCase):
         force_authenticate(request=request, user=self.user, token=self.key)
         data = self.view(request).render()
         j = json.loads(data.content.decode())
+        p3["id"] = j[0]["id"]
+        p4["id"] = j[1]["id"]
         self.assertFalse(p1 in j)
         self.assertFalse(p2 in j)
         self.assertTrue(p3 in j)
