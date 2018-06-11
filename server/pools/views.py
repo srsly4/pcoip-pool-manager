@@ -1,12 +1,11 @@
 import csv
 import io
-import time
 from datetime import timedelta, datetime
 
-from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
-from django.core.mail import send_mail, EmailMessage
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.mail import EmailMessage
 from django.db.models import Q
 from rest_framework.parsers import JSONParser, MultiPartParser, FormParser
 from rest_framework.permissions import AllowAny
@@ -15,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.status import *
 from rest_framework.views import APIView
 
-from pcoippoolmanager import settings
+from ..pcoippoolmanager import settings
 from .models import Pool
 from .models import Reservation, ExpirableToken
 from .utils import parse_utils
@@ -67,6 +66,8 @@ class SingleReservation(APIView):
         try:
             body = request.data
             pool = Pool.objects.get(pool_id=body['pool_id'])
+            if body['start_datetime'] > body['end_datetime']:
+                return Response("Start datetime set after end datetime", status=HTTP_409_CONFLICT)
             if pool.can_place_reservation(body['slot_count'], body['start_datetime'], body['end_datetime']):
                 reservation = Reservation(pool=pool, user=request.user, slot_count=body['slot_count'],
                                           start_datetime=body['start_datetime'],
@@ -74,7 +75,7 @@ class SingleReservation(APIView):
                 reservation.save()
                 return Response("Reservation added to database", HTTP_201_CREATED)
             else:
-                return Response("Can't add reservation", HTTP_409_CONFLICT)
+                return Response("Not enough slots left to add reservation", HTTP_409_CONFLICT)
         except KeyError:
             return Response("Incorrect JSON format", HTTP_400_BAD_REQUEST)
 
@@ -303,10 +304,12 @@ class Statistics(APIView):
                 _end_datetime = datetime.strptime(request.GET.get('end'), "%Y-%m-%d-%H-%M")
             else:
                 _end_datetime = datetime.now()
-        except (TypeError, ValueError):
+        except TypeError:
             return Response(status=HTTP_400_BAD_REQUEST, data="Incorrect date format")
+        except ValueError:
+            return Response(status=HTTP_400_BAD_REQUEST, data="Argument not a date")
         if _start_datetime > _end_datetime:
-            return Response(status=HTTP_400_BAD_REQUEST, data="Start date after end")
+            return Response(status=HTTP_400_BAD_REQUEST, data="Start datetime set after end datetime")
         reservations_in_timeslot = Reservation.objects.filter(Q(pool__enabled=True),
                                                               Q(start_datetime__gt=_start_datetime,
                                                                 start_datetime__lt=_end_datetime) |
