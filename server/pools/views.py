@@ -127,7 +127,6 @@ class Reservations(APIView):
         """
         filters = {'is_canceled': False}
         start_datetime = request.GET.get('start')
-        print(start_datetime)
         date_format = '%Y-%m-%d %H:%M:%S'
         if start_datetime is not None:
             filters["start_datetime__gte"] = datetime.strptime(start_datetime, date_format)
